@@ -450,12 +450,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.goal_threshold = 0.1
 
         # property estimation goal
-        if self.prop_mode=="fric": 
-            self.prop_estimate_threshold = 0.05
-        elif self.prop_mode=="com": 
-            self.prop_estimate_threshold = 0.005
-        else:  
-            self.prop_estimate_threshold = 0.05
+        self.prop_estimate_threshold = 0.05
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing
         self.rew_scale_goal_exp = self.cfg.rew_scale_goal_exp
         
@@ -1074,16 +1069,10 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # print(self.denormalsied_output)
         # print(self.denormalsied_target)
         # print(self.groundtruth_prop)
-        if self.prop_mode=="fric": 
-            squared_error = (self.denormalsied_output - self.denormalsied_target) ** 2
-            self.prop_rmse_eachenv = torch.sqrt(squared_error).squeeze() 
-            if self.prop_rmse_eachenv.numel() == 1 and self.prop_rmse_eachenv.dim() == 0:
-                self.prop_rmse_eachenv = self.prop_rmse_eachenv.unsqueeze(0)
-        elif self.prop_mode=="com": 
-            self.prop_rmse_eachenv = torch.sqrt(((self.denormalsied_output - self.denormalsied_target) ** 2).sum(dim=1))
-
-        # print("each env error")
-        # print(self.prop_rmse_eachenv) 
+        squared_error = (self.denormalsied_output - self.denormalsied_target) ** 2
+        self.prop_rmse_eachenv = torch.sqrt(squared_error).squeeze() 
+        if self.prop_rmse_eachenv.numel() == 1 and self.prop_rmse_eachenv.dim() == 0:
+            self.prop_rmse_eachenv = self.prop_rmse_eachenv.unsqueeze(0)
 
     def _get_transition_to_task_idx(self, transition_to_task_idx: Sequence[int]) -> None:
         # print("hello")
