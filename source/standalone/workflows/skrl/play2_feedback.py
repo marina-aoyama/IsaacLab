@@ -158,6 +158,7 @@ def main():
     agent_cfg["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
+    agent_cfg["pre_trained_models"] = env.pre_trained_models
     agent_cfg["prop_estimator"]["train"] = False
 
     agent = PPO_RNN_PROPEXP(
@@ -191,6 +192,8 @@ def main():
         config={},
     )
 
+    # test_mode = env.test_mode
+
     # reset environment
     obs, infos = env.reset()
     prev_total_episode_num = 0
@@ -211,8 +214,8 @@ def main():
             env._set_estimation(prop_info)
 
             if "prop_estimation" in infos: 
-                print("curr rmse")
-                print(infos["prop_estimation"])
+                # print("curr rmse")
+                # print(infos["prop_estimation"])
                 # print("Passed info")
                 # print(prop_estimator_output)
                 pass

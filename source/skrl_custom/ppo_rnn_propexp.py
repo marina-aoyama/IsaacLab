@@ -220,7 +220,8 @@ class PPO_RNN_PROPEXP(Agent):
         self.prop_criterion = nn.MSELoss()
         self.prop_optimizer = optim.Adam(self.prop_model.parameters(), lr=prop_learning_rate)
 
-        if not self.cfg["prop_estimator"]["pre_trained"]: 
+        # if not self.cfg["prop_estimator"]["pre_trained"]: 
+        if not self.cfg["pre_trained_models"]["pre_trained"]: 
             print("Train prop model from scratchs")
         else: 
             print("Load pre-trained prop model")
@@ -230,11 +231,13 @@ class PPO_RNN_PROPEXP(Agent):
             # self.prop_model.load_state_dict(torch.load(trained_model_path, map_location=torch.device(self.device)))
             # print("Load prop model")
             # trained_model_path = "/workspace/isaaclab/logs/skrl/exploration_direct/2024-10-14_09-49-25/checkpoints_prop/LSTM_best.pth"
-            trained_model_path = self.cfg["prop_estimator"]["pre_trained_path"]
+            # trained_model_path = self.cfg["prop_estimator"]["pre_trained_path"]
+            trained_model_path = self.cfg["pre_trained_models"]["pre_trained_path"]
             self.prop_model.load_state_dict(torch.load(trained_model_path, map_location=torch.device(self.device)))
             print("Pre-trained model loaded")
 
-        self.prop_model_freeze_weights = self.cfg["prop_estimator"]["freeze_weights"]
+        # self.prop_model_freeze_weights = self.cfg["prop_estimator"]["freeze_weights"]
+        self.prop_model_freeze_weights = self.cfg["pre_trained_models"]["freeze_weights"]
 
         self.policy_switch = self.cfg["prop_estimator"]["policy_switch"]  
 

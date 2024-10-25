@@ -167,6 +167,7 @@ def main():
     agent_cfg["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
+    agent_cfg["pre_trained_models"] = env.pre_trained_models
     agent_cfg["prop_estimator"]["train"] = False
 
     agent = PPO_RNN_PROPEXP(
@@ -213,6 +214,7 @@ def main():
 
     exp_agent_cfg = copy.deepcopy(agent_cfg)
     exp_agent_cfg["prop_estimator"] = prop_experiment_cfg["prop_estimator"]
+    exp_agent_cfg["pre_trained_models"] = env.pre_trained_models
     exp_agent_cfg["state_preprocessor_kwargs"].update({"size": exp_observation_space, "device": env.device})
     exp_agent_cfg["value_preprocessor_kwargs"].update({"size": 1, "device": env.device})
     exp_agent = PPO_RNN_PROPEXP(
@@ -327,6 +329,7 @@ def main():
             env._get_transition_to_task_idx(transition_to_task_idx)
 
             curr_prop_info = env._get_estimation()["denormalsied_target"]
+            curr_prop_estimated = env._get_estimation()["denormalsied_output"]
             # print("prop")
             # print(curr_task_phase)
             if curr_prop_info is not None: 
@@ -343,6 +346,11 @@ def main():
 
                 # Normalize the entire tensor (broadcasting works here)
                 normalised_expend_prop_info = normalize(expend_prop_info, dynamic_frictions_min, dynamic_frictions_max, state_norm_min, state_norm_max)
+                if transition_mask[0]==True: 
+                    # print("rmse assigned!!")
+                    # print(curr_prop_info)
+                    # print(curr_prop_estimated)
+                    pass
                 
             # # print("Check")
             # # print(curr_task_phase)
@@ -350,7 +358,7 @@ def main():
             obs_task = obs
             if test_mode != "taskonly": 
                 if normalised_expend_prop_info is not None: 
-                    obs_task[curr_task_phase, 11] = normalised_expend_prop_info[curr_task_phase, 0]
+                    obs_task[curr_task_phase, 10] = normalised_expend_prop_info[curr_task_phase, 0]
 
             # # print(obs_task[:,11])
 
@@ -365,6 +373,10 @@ def main():
             actions_exp = outputs_exp["mean_actions"]
             if test_mode == "taskonly": 
                 actions_exp = torch.zeros_like(actions_exp)
+            if test_mode == "exptask": 
+                actions_task = torch.zeros_like(actions_exp)
+
+            # print(curr_task_phase)
 
             final_actions = torch.where(curr_task_phase.unsqueeze(1), actions_task, actions_exp)
             # final_actions = torch.where(task_phase.unsqueeze(1), actions_task, actions_rest)
@@ -396,6 +408,7 @@ def main():
             prop_info["prop_estimator_output"] = prop_estimator_output_exp
             # print("Prop info")
             # print(prop_info)
+            # print(prop_estimator_output_exp)
             env._set_estimation(prop_info)
 
             # transition_to_task = (~prev_task_phase) & curr_task_phase
