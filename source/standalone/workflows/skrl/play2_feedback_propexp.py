@@ -328,8 +328,8 @@ def main():
             transition_to_task_idx = torch.nonzero(transition_to_task).squeeze().view(-1)
             env._get_transition_to_task_idx(transition_to_task_idx)
 
-            curr_prop_info = env._get_estimation()["denormalsied_target"]
-            curr_prop_estimated = env._get_estimation()["denormalsied_output"]
+            curr_prop_info = env._get_estimation()["denormalsied_output"]
+            # curr_prop_estimated = env._get_estimation()["denormalsied_output"]
             # print("prop")
             # print(curr_task_phase)
             if curr_prop_info is not None: 
@@ -368,13 +368,14 @@ def main():
             actions_task = outputs_task["mean_actions"]
             # print(actions.shape)
             # print(outputs["mean_actions"].shape)
-            obs_exp = obs[:, :exp_observation_space]
+            # obs_exp = obs[:, :exp_observation_space]
+            obs_exp = infos["exponly_obs"][:, :exp_observation_space]
             actions_exp, log_prob_exp, outputs_exp, prop_estimator_output_exp = exp_agent.act(obs_exp, infos, timestep=0, timesteps=0)
             actions_exp = outputs_exp["mean_actions"]
             if test_mode == "taskonly": 
                 actions_exp = torch.zeros_like(actions_exp)
-            if test_mode == "exptask": 
-                actions_task = torch.zeros_like(actions_exp)
+            # if test_mode == "exptask": 
+            #     actions_task = torch.zeros_like(actions_exp)
 
             # print(curr_task_phase)
 

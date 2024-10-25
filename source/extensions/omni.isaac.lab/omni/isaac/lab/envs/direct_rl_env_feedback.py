@@ -262,6 +262,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
         if "rnn_input" in obs: 
             self.extras["rnn_input"] = obs['rnn_input']
 
+        if "exponly_obs" in obs: 
+            self.extras["exponly_obs"] = obs["exponly_obs"]
+
         # return observations
         return obs, self.extras
 
@@ -429,6 +432,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
 
         if "rnn_input" in self.obs_buf: 
             self.extras["rnn_input"] = self.obs_buf['rnn_input']
+
+        if "exponly_obs" in self.obs_buf: 
+            self.extras["exponly_obs"] = self.obs_buf["exponly_obs"]
 
         # print("Episode curr step")
         # print(self.episode_length_buf)

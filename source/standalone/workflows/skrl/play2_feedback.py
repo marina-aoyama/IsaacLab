@@ -192,7 +192,7 @@ def main():
         config={},
     )
 
-    # test_mode = env.test_mode
+    test_mode = env.test_mode
 
     # reset environment
     obs, infos = env.reset()
@@ -203,6 +203,11 @@ def main():
         with torch.inference_mode():
             # agent stepping
             # actions = agent.act(obs, timestep=0, timesteps=0)[0]
+            if test_mode=="exponly": 
+                obs = infos["exponly_obs"]
+                # print("exp obs")
+                # print(obs)
+                # print(infos["exponly_obs"])
             actions, log_prob, outputs, prop_estimator_output = agent.act(obs, infos, timestep=0, timesteps=0)
             actions = outputs["mean_actions"]
             
