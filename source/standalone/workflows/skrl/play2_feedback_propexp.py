@@ -168,6 +168,7 @@ def main():
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
     agent_cfg["pre_trained_models"] = env.pre_trained_models
+    agent_cfg["env_mode"] = env.env_mode
     agent_cfg["prop_estimator"]["train"] = False
 
     agent = PPO_RNN_PROPEXP(
@@ -215,6 +216,7 @@ def main():
     exp_agent_cfg = copy.deepcopy(agent_cfg)
     exp_agent_cfg["prop_estimator"] = prop_experiment_cfg["prop_estimator"]
     exp_agent_cfg["pre_trained_models"] = env.pre_trained_models
+    exp_agent_cfg["env_mode"] = env.env_mode
     exp_agent_cfg["state_preprocessor_kwargs"].update({"size": exp_observation_space, "device": env.device})
     exp_agent_cfg["value_preprocessor_kwargs"].update({"size": 1, "device": env.device})
     exp_agent = PPO_RNN_PROPEXP(

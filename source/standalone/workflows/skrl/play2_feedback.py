@@ -159,6 +159,7 @@ def main():
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
     agent_cfg["pre_trained_models"] = env.pre_trained_models
+    agent_cfg["env_mode"] = env.env_mode
     agent_cfg["prop_estimator"]["train"] = False
 
     agent = PPO_RNN_PROPEXP(
@@ -238,6 +239,7 @@ def main():
             # print(prop_estimator_output["denormalsied_output"])
             # print("Should be same as GroundTruth")
             # print(prop_estimator_output["denormalsied_target"])
+            # print(prop_estimator_output["rnn_rmse"])
             # print(infos["prop"].shape)  # (num_envs, num_char)
 
 
@@ -263,14 +265,17 @@ def main():
                 print(success_rate_1env)
                 # wandb.log({"Episode_num": total_episode_num})  
                 # wandb.log({"success_rate": success_rate_1env}) 
+                success_rate_allenv = infos["log"]["success_rate"]
+                print("All env success rate")
+                print(success_rate_allenv)
 
                 if "log" in infos and "end_rmse" in infos["log"]:
                     end_rmse = infos["log"]["end_rmse"]
                     # print(infos["log"]["end_rmse"])
                     # print(end_rmse)       
-                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "end_rmse": end_rmse})
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse": end_rmse})
                 else: 
-                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env})
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv})
                 prev_total_episode_num = total_episode_num 
 
             # print(total_episode_num)

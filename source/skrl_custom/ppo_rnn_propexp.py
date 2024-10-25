@@ -194,7 +194,14 @@ class PPO_RNN_PROPEXP(Agent):
         input_size = self.cfg["prop_estimator"]["input_size"]  # State and action concatenated size
         hidden_size = self.cfg["prop_estimator"]["hidden_size"]    # Number of features in hidden state
         num_layers = self.cfg["prop_estimator"]["num_layers"]      # Number of LSTM layers
-        output_size = self.cfg["prop_estimator"]["output_size"]     # Number of physical properties (e.g., friction, CoM)
+        self.prop_mode = self.cfg["env_mode"]["prop_mode"]
+        if self.prop_mode=="fric": 
+            output_size = 1
+        elif self.prop_mode=="com": 
+            output_size = 2
+        else: 
+            output_size = 3
+        # output_size = self.cfg["prop_estimator"]["output_size"]     # Number of physical properties (e.g., friction, CoM)
         self.num_epochs = self.cfg["prop_estimator"]["num_epochs"]
         prop_learning_rate = self.cfg["prop_estimator"]["learning_rate"]
         self.position_index = self.cfg["prop_estimator"]["position_index"]
@@ -210,6 +217,8 @@ class PPO_RNN_PROPEXP(Agent):
         self.feature_target_max = self.cfg["prop_estimator"]["feature_target_max"]   
         self.fric_min = self.cfg["prop_estimator"]["fric_min"] 
         self.fric_max = self.cfg["prop_estimator"]["fric_max"] 
+        self.com_min = self.cfg["prop_estimator"]["com_min"] 
+        self.com_max = self.cfg["prop_estimator"]["com_max"] 
         self.estimate_target_min = self.cfg["prop_estimator"]["estimate_target_min"]   
         self.estimate_target_max = self.cfg["prop_estimator"]["estimate_target_max"]   
 
@@ -361,10 +370,27 @@ class PPO_RNN_PROPEXP(Agent):
             self.curr_rollout_rnn_input.append(normalized_curr_rnn_prop_input)
         # self.curr_rollout_rnn_input.append(curr_rnn_prop_input)
 
-        curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
-        frictions = curr_rnn_prop_target
-        normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-        normalized_curr_rnn_prop_target = normalized_friction
+        if self.prop_mode=="fric": 
+            curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
+            frictions = curr_rnn_prop_target
+            normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            normalized_curr_rnn_prop_target = normalized_friction
+        elif self.prop_mode=="com": 
+            curr_rnn_prop_target = infos["prop"][:,[1,2]]
+            coms = curr_rnn_prop_target
+            normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            normalized_curr_rnn_prop_target = normalized_com
+        else: 
+            curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
+            frictions = curr_rnn_prop_target
+            normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            normalized_curr_rnn_prop_target = normalized_friction
+
+        # curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
+        # prop_mode
+        # frictions = curr_rnn_prop_target
+        # normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+        # normalized_curr_rnn_prop_target = normalized_friction
 
         if not self.prop_model_freeze_weights: 
             self.curr_rollout_rnn_target.append(normalized_curr_rnn_prop_target)
@@ -375,9 +401,23 @@ class PPO_RNN_PROPEXP(Agent):
 
         with torch.no_grad():
             normalized_output = self.prop_model(normalized_curr_rnn_prop_input)
+            
+        if self.prop_mode=="fric": 
+            denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+        elif self.prop_mode=="com": 
+            denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+        else: 
+            denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+        
+        # print("denormalsied_output")
+        # print(denormalsied_output.shape)
+        # print(denormalsied_target.shape)
 
-        denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-        denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+        # denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+        # denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
 
         # mean_friction = 0.5
         # weight = 1+ torch.abs(normalized_curr_rnn_prop_target-mean_friction)
@@ -508,7 +548,7 @@ class PPO_RNN_PROPEXP(Agent):
             if self._time_limit_bootstrap:
                 rewards += self._discount_factor * values * truncated
 
-            # package RNN states
+            # package RNN states 
             rnn_states = {}
             if self._rnn:
                 rnn_states.update({f"rnn_policy_{i}": s.transpose(0, 1) for i, s in enumerate(self._rnn_initial_states["policy"])})

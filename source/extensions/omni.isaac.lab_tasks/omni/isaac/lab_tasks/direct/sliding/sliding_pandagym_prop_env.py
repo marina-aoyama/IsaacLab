@@ -51,9 +51,9 @@ class EventCfg:
       params={
           "asset_cfg": SceneEntityCfg("cylinderpuck2"),
           "static_friction_range": (0.05, 0.05),
-          "dynamic_friction_range": (0.05, 0.3),
+          "dynamic_friction_range": (0.05, 0.05),
           "restitution_range": (1.0, 1.0),  # (1.0, 1.0),  
-        #   "com_rad": 0.032, 
+          "com_rad": 0.032, 
         #   "com_range_x": (-0.01, 0.01), # (-0.02, 0.02),
         #   "com_range_y": (-0.01, 0.01), # (-0.02, 0.02),
         #   "com_range_z": (0.0, 0.0), 
@@ -350,7 +350,7 @@ class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
     episode_length_s = 3.0
     action_scale = 1.0
     num_actions = 2 # action dim
-    num_observations = 10
+    num_observations = 12
     num_states = 2
 
     max_puck_posx = 2.0  # the cart is reset if it exceeds that position [m]
@@ -382,14 +382,18 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         run_env_cfg_path = kwargs["run_env_cfg"]
         with open(run_env_cfg_path, 'r') as file:
             run_env_cfg = yaml.safe_load(file)
-        self.test_mode = run_env_cfg["test_mode"]
-        self.train_model = run_env_cfg["train_model"]
+        self.env_mode = run_env_cfg["env_mode"]
+        self.test_mode = run_env_cfg["env_mode"]["test_mode"]
+        self.train_model = run_env_cfg["env_mode"]["train_model"]
+        self.prop_mode = run_env_cfg["env_mode"]["prop_mode"]
         self.pre_trained_models = run_env_cfg["pre_trained_models"]
 
         if self.test_mode=="exponly": 
             cfg.num_observations = 10
-        else: 
+        elif self.prop_mode=="fric": 
             cfg.num_observations = 11
+        elif self.prop_mode=="com": 
+            cfg.num_observations = 12
 
         super().__init__(cfg, render_mode, **kwargs)
         
@@ -446,7 +450,12 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.goal_threshold = 0.1
 
         # property estimation goal
-        self.prop_estimate_threshold = 0.05
+        if self.prop_mode=="fric": 
+            self.prop_estimate_threshold = 0.05
+        elif self.prop_mode=="com": 
+            self.prop_estimate_threshold = 0.005
+        else:  
+            self.prop_estimate_threshold = 0.05
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing
         self.rew_scale_goal_exp = self.cfg.rew_scale_goal_exp
         
@@ -996,9 +1005,12 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_rot_obs_yaw, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions), dim=1)   
         if self.test_mode=="exponly" and self.train_model=="train": #  and self.train_model=="train"
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_pushing_goal_tensor_x, normalized_pushing_goal_tensor_y), dim=1)   
-        else: 
+        elif self.prop_mode=="fric": 
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions), dim=1)   
+        elif self.prop_mode=="com": 
+            obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1)), dim=1)   
         exponly_obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_pushing_goal_tensor_x, normalized_pushing_goal_tensor_y), dim=1)   
+        # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, curr_cylinderpuck2_state[:, 6].view(-1,1), normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1)), dim=1)   
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_rot_obs_yaw, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y), dim=1)   
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, curr_cylinderpuck2_state[:, 6].view(-1,1), normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions), dim=1)        
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_rot_obs_yaw, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions, normalized_past_puckpusher_relative_obs, normalized_past_puckgoal_relative_obs), dim=1)        
@@ -1062,12 +1074,16 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # print(self.denormalsied_output)
         # print(self.denormalsied_target)
         # print(self.groundtruth_prop)
-        squared_error = (self.denormalsied_output - self.denormalsied_target) ** 2
-        self.prop_rmse_eachenv = torch.sqrt(squared_error).squeeze() 
-        if self.prop_rmse_eachenv.numel() == 1 and self.prop_rmse_eachenv.dim() == 0:
-            self.prop_rmse_eachenv = self.prop_rmse_eachenv.unsqueeze(0)
+        if self.prop_mode=="fric": 
+            squared_error = (self.denormalsied_output - self.denormalsied_target) ** 2
+            self.prop_rmse_eachenv = torch.sqrt(squared_error).squeeze() 
+            if self.prop_rmse_eachenv.numel() == 1 and self.prop_rmse_eachenv.dim() == 0:
+                self.prop_rmse_eachenv = self.prop_rmse_eachenv.unsqueeze(0)
+        elif self.prop_mode=="com": 
+            self.prop_rmse_eachenv = torch.sqrt(((self.denormalsied_output - self.denormalsied_target) ** 2).sum(dim=1))
 
-        # print(prop_rmse_eachenv) 
+        # print("each env error")
+        # print(self.prop_rmse_eachenv) 
 
     def _get_transition_to_task_idx(self, transition_to_task_idx: Sequence[int]) -> None:
         # print("hello")
