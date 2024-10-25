@@ -197,7 +197,7 @@ class PPO_RNN_PROPEXP(Agent):
         self.prop_mode = self.cfg["env_mode"]["prop_mode"]
         if self.prop_mode=="fric": 
             output_size = 1
-        elif self.prop_mode=="com2": 
+        elif self.prop_mode=="com": 
             output_size = 2
         else: 
             output_size = 1
@@ -375,7 +375,7 @@ class PPO_RNN_PROPEXP(Agent):
             frictions = curr_rnn_prop_target
             normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
             normalized_curr_rnn_prop_target = normalized_friction
-        elif self.prop_mode=="com2": 
+        elif self.prop_mode=="com": 
             curr_rnn_prop_target = infos["prop"][:,[1,2]]
             coms = curr_rnn_prop_target
             normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
@@ -405,7 +405,7 @@ class PPO_RNN_PROPEXP(Agent):
         if self.prop_mode=="fric": 
             denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
             denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-        elif self.prop_mode=="com2": 
+        elif self.prop_mode=="com": 
             denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
             denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
         else: 
