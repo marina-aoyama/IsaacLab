@@ -176,7 +176,7 @@ def main():
     agent_cfg["value_preprocessor_kwargs"].update({"size": 1, "device": env.device})
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
-    agent_cfg["pre_trained_models"] = env.pre_trained_models
+    agent_cfg["pre_trained_models"] = env.pre_trained_models_cfg
     agent_cfg["env_mode"] = env.env_mode
 
     agent = PPO_RNN_PROPEXP(

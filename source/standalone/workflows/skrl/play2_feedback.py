@@ -158,7 +158,7 @@ def main():
     agent_cfg["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
-    agent_cfg["pre_trained_models"] = env.pre_trained_models
+    agent_cfg["pre_trained_models"] = env.pre_trained_models_cfg
     agent_cfg["env_mode"] = env.env_mode
     agent_cfg["prop_estimator"]["train"] = False
 

@@ -167,7 +167,7 @@ def main():
     agent_cfg["experiment"]["checkpoint_interval"] = 0  # don't generate checkpoints
 
     agent_cfg["prop_estimator"] = experiment_cfg["prop_estimator"]
-    agent_cfg["pre_trained_models"] = env.pre_trained_models
+    agent_cfg["pre_trained_models"] = env.pre_trained_models_cfg
     agent_cfg["env_mode"] = env.env_mode
     agent_cfg["prop_estimator"]["train"] = False
 
@@ -182,8 +182,11 @@ def main():
 
     ### Exp model ###
     exp_models = {}
-    exp_observation_space = prop_experiment_cfg["prop_estimator"]["pre_trained_observation_space"]
-    exp_action_space = prop_experiment_cfg["prop_estimator"]["pre_trained_action_space"]
+    # exp_observation_space = prop_experiment_cfg["prop_estimator"]["pre_trained_observation_space"]
+    # exp_action_space = prop_experiment_cfg["prop_estimator"]["pre_trained_action_space"]
+    exp_observation_space = env.pre_trained_models_cfg["pre_trained_observation_space"]
+    exp_action_space = env.pre_trained_models_cfg["pre_trained_action_space"]
+    # env.env_mode["pre_trained_models"]["pre_trained_observation_space"]
     # non-shared exp_models
     if exp_experiment_cfg["models"]["separate"]:
         exp_models["policy"] = gaussian_model(
@@ -215,7 +218,7 @@ def main():
 
     exp_agent_cfg = copy.deepcopy(agent_cfg)
     exp_agent_cfg["prop_estimator"] = prop_experiment_cfg["prop_estimator"]
-    exp_agent_cfg["pre_trained_models"] = env.pre_trained_models
+    exp_agent_cfg["pre_trained_models"] = env.pre_trained_models_cfg
     exp_agent_cfg["env_mode"] = env.env_mode
     exp_agent_cfg["state_preprocessor_kwargs"].update({"size": exp_observation_space, "device": env.device})
     exp_agent_cfg["value_preprocessor_kwargs"].update({"size": 1, "device": env.device})
@@ -231,7 +234,8 @@ def main():
 
     exp_agent.init()
     print("Pre-trained exp path")
-    pre_trained_policy_path = prop_experiment_cfg["prop_estimator"]["pre_trained_policy_path"]
+    # pre_trained_policy_path = prop_experiment_cfg["prop_estimator"]["pre_trained_policy_path"]
+    pre_trained_policy_path = env.pre_trained_models_cfg["pre_trained_policy_path"]
     print(pre_trained_policy_path)
     exp_agent.load(pre_trained_policy_path)
     # set agent to evaluation mode
@@ -269,6 +273,7 @@ def main():
     # # test_mode = "exptask"
     test_mode = env.test_mode
     prop_mode = env.env_mode["prop_mode"]
+    pre_trained_models_cfg = env.pre_trained_models_cfg
 
     # reset environment
     obs, infos = env.reset()
