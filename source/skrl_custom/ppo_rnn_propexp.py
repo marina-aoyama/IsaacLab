@@ -200,7 +200,7 @@ class PPO_RNN_PROPEXP(Agent):
         elif self.prop_mode=="com": 
             output_size = 2
         else: 
-            output_size = 1
+            output_size = 2
         # output_size = self.cfg["prop_estimator"]["output_size"]     # Number of physical properties (e.g., friction, CoM)
         self.num_epochs = self.cfg["prop_estimator"]["num_epochs"]
         prop_learning_rate = self.cfg["prop_estimator"]["learning_rate"]
@@ -381,10 +381,10 @@ class PPO_RNN_PROPEXP(Agent):
             normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
             normalized_curr_rnn_prop_target = normalized_com
         else: 
-            curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
-            frictions = curr_rnn_prop_target
-            normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-            normalized_curr_rnn_prop_target = normalized_friction
+            curr_rnn_prop_target = infos["prop"][:,[1,2]]
+            coms = curr_rnn_prop_target
+            normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            normalized_curr_rnn_prop_target = normalized_com
 
         # curr_rnn_prop_target = infos["prop"][:,0].reshape(-1,1)
         # prop_mode
@@ -409,9 +409,8 @@ class PPO_RNN_PROPEXP(Agent):
             denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
             denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
         else: 
-            denormalsied_output = denormalize(normalized_output, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-            denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
-        
+            denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
         # print("denormalsied_output")
         # print(denormalsied_output.shape)
         # print(denormalsied_target.shape)

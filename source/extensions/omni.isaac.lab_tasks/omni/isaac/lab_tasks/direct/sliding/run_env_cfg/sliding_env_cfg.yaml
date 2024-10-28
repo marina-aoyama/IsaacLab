@@ -2,7 +2,7 @@
 env_mode: 
   train_model: "train" # "train" # "test" # test_singlepolicy
   test_mode: "taskonly" # "exponly" # "exptask" # "taskonly"
-  prop_mode: "fric"  # "fric" # fric_com  # "com"
+  prop_mode: "com"  # "fric" # fric_com  # "com"
 
 # train_model: "train" # "train" # "test"
 # test_mode: "taskonly" # "exponly" # "exptask" # "taskonly"
