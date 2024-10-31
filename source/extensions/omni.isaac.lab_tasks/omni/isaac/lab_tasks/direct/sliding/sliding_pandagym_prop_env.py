@@ -444,16 +444,24 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.test_mode = run_env_cfg["env_mode"]["test_mode"]
         self.train_model = run_env_cfg["env_mode"]["train_model"]
         self.prop_mode = run_env_cfg["env_mode"]["prop_mode"]
+        self.test_case = run_env_cfg["env_mode"]["test_case"]
         self.pre_trained_models_cfg = run_env_cfg["pre_trained_models"]
 
         if self.test_mode=="exponly" and (self.train_model=="train" or self.train_model=="test_singlepolicy"): 
             cfg.num_observations = 10
+            print("Exploration policy")
+        elif self.test_case=="dr": 
+            cfg.num_observations = 10
+            print("Domain Randomisation")
         elif self.prop_mode=="fric": 
             cfg.num_observations = 11
+            print("Friction Groundtruth")
         elif self.prop_mode=="com": 
             cfg.num_observations = 12
+            print("CoM Groundtruth")
         elif self.prop_mode=="fric_com": 
             cfg.num_observations = 13
+            print("Friction + CoM Groundtruth")
 
         if self.prop_mode=="fric": 
             cfg.events = EventCfg_Fric()
@@ -520,7 +528,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         if self.prop_mode=="fric": 
             self.prop_estimate_threshold = 0.05
         elif self.prop_mode=="com": 
-            self.prop_estimate_threshold = 0.005
+            self.prop_estimate_threshold = 0.005 # 0.005
         else:  
             self.prop_estimate_threshold = 0.05
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing
@@ -1073,6 +1081,8 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # if self.test_mode=="exponly" and self.train_model=="train": #  and self.train_model=="train"
         if self.test_mode=="exponly" and (self.train_model=="train" or self.train_model=="test_singlepolicy"): 
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_pushing_goal_tensor_x, normalized_pushing_goal_tensor_y), dim=1)   
+        elif self.test_case=="dr": 
+            obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y), dim=1)   
         elif self.prop_mode=="fric": 
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions), dim=1)   
         elif self.prop_mode=="com": 
@@ -1549,12 +1559,12 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.markergoal1.visualize(goal_pos, goal_rot) 
 
         # Goal for pushing
-        # goal_noise_x = sample_uniform(self.pushing_goal_location_max_x, self.pushing_goal_location_min_x, (len(env_ids)), device=self.device)
-        # goal_noise_y = sample_uniform(self.pushing_goal_location_max_y, self.pushing_goal_location_min_y, (len(env_ids)), device=self.device)
+        goal_noise_x = sample_uniform(self.pushing_goal_location_max_x, self.pushing_goal_location_min_x, (len(env_ids)), device=self.device)
+        goal_noise_y = sample_uniform(self.pushing_goal_location_max_y, self.pushing_goal_location_min_y, (len(env_ids)), device=self.device)
         goal_pos_offset = self.pushing_goal_locations.clone()
         # goal_pos_offset[env_ids, 0] = goal_noise
-        # goal_pos_offset[env_ids, 0] = goal_noise_x
-        # goal_pos_offset[env_ids, 1] = goal_noise_y
+        goal_pos_offset[env_ids, 0] = goal_noise_x
+        goal_pos_offset[env_ids, 1] = goal_noise_y
 
         self.pushing_goal_locations = goal_pos_offset.clone()
         # self.maxpushing_goal_locations = self.pushing_goal_locations[:,0]+(self.goal_length/2.0)-(self.cfg.puck_length/2.0)  # the cart is reset if it exceeds that position [m] (-0.7)
