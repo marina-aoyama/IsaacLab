@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import torch
+
 import yaml
 from collections.abc import Sequence
 
@@ -521,7 +522,7 @@ class SlidingExample2Env(DirectRLEnvFeedback):
             self.prop_estimate_threshold = 0.05
         elif self.prop_mode=="com": 
             if self.pre_trained_models_cfg["iteration_count"] > 1: 
-                self.prop_estimate_threshold = 0.005 # 0.005
+                self.prop_estimate_threshold = 0.007 # 0.005
                 print("Second iteration")
             else: 
                 self.prop_estimate_threshold = 0.01 # 0.005
