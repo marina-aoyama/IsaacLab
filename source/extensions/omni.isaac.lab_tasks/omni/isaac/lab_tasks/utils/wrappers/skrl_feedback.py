@@ -193,6 +193,10 @@ class SkrlSequentialLogTrainer_Feedback(Trainer):
         states, infos = self.env.reset()
         # training loop
         for timestep in tqdm.tqdm(range(self.timesteps), disable=self.disable_progressbar):
+            # print("current")
+            # print(timestep)
+            # print("max")
+            # print(self.timesteps)
             # pre-interaction
             self.agents.pre_interaction(timestep=timestep, timesteps=self.timesteps)
             # compute actions

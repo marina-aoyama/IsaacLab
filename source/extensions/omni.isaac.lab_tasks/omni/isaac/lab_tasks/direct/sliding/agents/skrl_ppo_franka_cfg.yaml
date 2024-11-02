@@ -173,5 +173,5 @@ prop_estimator:
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
-  timesteps: 24000 # 24000
+  timesteps: 10 # 24000 # 24000
   environment_info: "log"

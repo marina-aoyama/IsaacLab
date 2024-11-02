@@ -133,17 +133,99 @@ gym.register(
     },
 )
 
-# gym.register(
-#     id="Isaac-Sliding-Direct-v8",
-#     entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymExp2Env",
-#     disable_env_checker=True,
-#     kwargs={
-#         "env_cfg_entry_point": SlidingPandaGymExp2EnvCfg,
-#         "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
-#         "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
-#         "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
-#         "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
-#         "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
-#     },
-# )
+# Fric DR
+gym.register(
+    id="Isaac-Sliding-Direct-v8",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_fric_dr.yaml"
+    },
+)
+
+# Fric GT
+gym.register(
+    id="Isaac-Sliding-Direct-v9",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_fric_gt.yaml"
+    },
+)
+
+# CoM DR
+gym.register(
+    id="Isaac-Sliding-Direct-v10",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_com_dr.yaml"
+    },
+)
+
+# CoM GT
+gym.register(
+    id="Isaac-Sliding-Direct-v11",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_com_gt.yaml"
+    },
+)
+
+# Fric + CoM DR
+gym.register(
+    id="Isaac-Sliding-Direct-v12",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_friccom_dr.yaml"
+    },
+)
+
+# Fric + CoM GT
+gym.register(
+    id="Isaac-Sliding-Direct-v13",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_taskonly_friccom_gt.yaml"
+    },
+)
 
