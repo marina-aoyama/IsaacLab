@@ -90,6 +90,9 @@ def randomize_rigid_body_material(
     # print(coms)
     # print(masses)
 
+    # print("env seed")
+    # print(env.cfg.env_seed)
+
     # sample material properties from the given ranges
     # dynamic_friction_values = torch.tensor([i / 100.0 for i in range(5, 31)], device="cpu")
     # dynamic_friction_values = torch.arange(dynamic_friction_range[0], dynamic_friction_range[1] + 0.01, 0.01, device="cpu")

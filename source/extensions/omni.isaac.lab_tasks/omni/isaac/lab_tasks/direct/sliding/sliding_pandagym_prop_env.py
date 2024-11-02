@@ -19,7 +19,7 @@ from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.sim import SimulationCfg
 from omni.isaac.lab.sim.spawners.from_files import GroundPlaneCfg, spawn_ground_plane
 from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.math import sample_uniform
+from omni.isaac.lab.utils.math import sample_uniform, sample_uniform_rng
 
 from omni.isaac.lab.assets import RigidObject, RigidObjectCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg
@@ -177,6 +177,8 @@ class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
     sim: SimulationCfg = SimulationCfg(dt=1 / 120)
 
     events: EventCfg = EventCfg()
+    
+    env_seed = 42
 
     # Noise
     # at every time-step add gaussian noise + bias. The bias is a gaussian sampled at reset
@@ -471,6 +473,9 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
             cfg.events = EventCfg_FricCoM()
 
         super().__init__(cfg, render_mode, **kwargs)
+
+        self.env_rng = torch.Generator(device=self.device)
+        self.env_rng.manual_seed(self.cfg.env_seed)
         
         # print("Received kwargs:", kwargs)
         # print(kwargs["run_env_cfg"])
@@ -1532,16 +1537,16 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         #         self.goal_length -= 0.1 
 
         if self.discrete_goal:
-            random_indices = torch.randint(len(self.discrete_goals), size=(len(env_ids),), device=self.device)
+            random_indices = torch.randint(len(self.discrete_goals), size=(len(env_ids),), generator=self.env_rng, device=self.device)
             goal_noise = self.discrete_goals[random_indices]
-            random_indices_x = torch.randint(len(self.discrete_goals_x), size=(len(env_ids),), device=self.device)
+            random_indices_x = torch.randint(len(self.discrete_goals_x), size=(len(env_ids),), generator=self.env_rng, device=self.device)
             goal_noise_x = self.discrete_goals_x[random_indices_x]
-            random_indices_y = torch.randint(len(self.discrete_goals_y), size=(len(env_ids),), device=self.device)
+            random_indices_y = torch.randint(len(self.discrete_goals_y), size=(len(env_ids),), generator=self.env_rng, device=self.device)
             goal_noise_y = self.discrete_goals_y[random_indices_y]
         else:
-            goal_noise = sample_uniform(self.goal_location_max, self.goal_location_min, (len(env_ids)), device=self.device)
-            goal_noise_x = sample_uniform(self.goal_location_max_x, self.goal_location_min_x, (len(env_ids)), device=self.device)
-            goal_noise_y = sample_uniform(self.goal_location_max_y, self.goal_location_min_y, (len(env_ids)), device=self.device)
+            goal_noise = sample_uniform_rng(self.goal_location_max, self.goal_location_min, (len(env_ids)), device=self.device, generator=self.env_rng)
+            goal_noise_x = sample_uniform_rng(self.goal_location_max_x, self.goal_location_min_x, (len(env_ids)), device=self.device, generator=self.env_rng)
+            goal_noise_y = sample_uniform_rng(self.goal_location_max_y, self.goal_location_min_y, (len(env_ids)), device=self.device, generator=self.env_rng)
         goal_pos_offset = self.goal_locations.clone()
         # goal_pos_offset[env_ids, 0] = goal_noise
         goal_pos_offset[env_ids, 0] = goal_noise_x
@@ -1559,8 +1564,8 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.markergoal1.visualize(goal_pos, goal_rot) 
 
         # Goal for pushing
-        goal_noise_x = sample_uniform(self.pushing_goal_location_max_x, self.pushing_goal_location_min_x, (len(env_ids)), device=self.device)
-        goal_noise_y = sample_uniform(self.pushing_goal_location_max_y, self.pushing_goal_location_min_y, (len(env_ids)), device=self.device)
+        goal_noise_x = sample_uniform_rng(self.pushing_goal_location_max_x, self.pushing_goal_location_min_x, (len(env_ids)), device=self.device, generator=self.env_rng)
+        goal_noise_y = sample_uniform_rng(self.pushing_goal_location_max_y, self.pushing_goal_location_min_y, (len(env_ids)), device=self.device, generator=self.env_rng)
         goal_pos_offset = self.pushing_goal_locations.clone()
         # goal_pos_offset[env_ids, 0] = goal_noise
         goal_pos_offset[env_ids, 0] = goal_noise_x
@@ -1610,7 +1615,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # reset table
         cuboidtable2_default_state = self.cuboidtable2.data.default_root_state.clone()[env_ids]
-        pos_noise = sample_uniform(-10.0, 10.0, (len(env_ids), 3), device=self.device)
+        pos_noise = sample_uniform_rng(-10.0, 10.0, (len(env_ids), 3), device=self.device, generator=self.env_rng)
         cuboidtable2_default_state[:, 0:3] = (
             cuboidtable2_default_state[:, 0:3] + self.scene.env_origins[env_ids]
         )

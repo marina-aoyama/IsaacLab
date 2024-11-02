@@ -1204,6 +1204,25 @@ def sample_uniform(
     # return tensor
     return torch.rand(*size, device=device) * (upper - lower) + lower
 
+def sample_uniform_rng(
+    lower: torch.Tensor | float, upper: torch.Tensor | float, size: int | tuple[int, ...], device: str, generator: torch.Generator = None 
+) -> torch.Tensor:
+    """Sample uniformly within a range.
+
+    Args:
+        lower: Lower bound of uniform range.
+        upper: Upper bound of uniform range.
+        size: The shape of the tensor.
+        device: Device to create tensor on.
+
+    Returns:
+        Sampled tensor. Shape is based on :attr:`size`.
+    """
+    # convert to tuple
+    if isinstance(size, int):
+        size = (size,)
+    # return tensor
+    return torch.rand(*size, generator=generator, device=device) * (upper - lower) + lower
 
 def sample_log_uniform(
     lower: torch.Tensor | float, upper: torch.Tensor | float, size: int | tuple[int, ...], device: str
