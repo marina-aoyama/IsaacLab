@@ -533,7 +533,13 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         if self.prop_mode=="fric": 
             self.prop_estimate_threshold = 0.05
         elif self.prop_mode=="com": 
-            self.prop_estimate_threshold = 0.005 # 0.005
+            if self.train_model=="train": 
+                if self.pre_trained_models_cfg["training_itr"] == 0: 
+                    self.prop_estimate_threshold = 0.01 # 0.005
+                else: 
+                    self.prop_estimate_threshold = 0.005 # 0.005
+            else: 
+                self.prop_estimate_threshold = 0.005 # 0.005
         else:  
             self.prop_estimate_threshold = 0.05
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing

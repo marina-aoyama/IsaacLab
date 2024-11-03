@@ -31,7 +31,7 @@ models:
 agent:
   rollouts: 16
   learning_epochs: 8
-  mini_batches: 32 # 16 for task with 8192envs? 8 for exploration
+  mini_batches: 32 # 32 for task with 8192envs? 8 for exploration
   discount_factor: 0.99
   lambda: 0.95
   learning_rate: 3.e-4  # 3.e-4 for task? 5.e-4 
@@ -173,5 +173,5 @@ prop_estimator:
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
-  timesteps: 4000 # 24000 # 24000
+  timesteps: 6000 # 24000 # 24000
   environment_info: "log"
