@@ -406,6 +406,8 @@ class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=5.0, replicate_physics=True)
 
+    # max_episode_length = math.ceil(3.0 / (5 * 1/120))
+
     decimation = 5
     episode_length_s = 3.0
     action_scale = 1.0
