@@ -285,6 +285,7 @@ def main():
     transition_rest_counter = torch.zeros(env.num_envs, dtype=torch.int32).to(env.device)
     expend_prop_info = torch.zeros((env.num_envs, 1)).to(env.device)
     normalised_expend_prop_info = None
+    exp_success_num = 0
     while simulation_app.is_running():
         # run everything in inference mode
         with torch.inference_mode():
@@ -335,6 +336,8 @@ def main():
             prev_task_phase = curr_task_phase
             transition_to_task_idx = torch.nonzero(transition_to_task).squeeze().view(-1)
             env._get_transition_to_task_idx(transition_to_task_idx)
+            if transition_to_task[0]: 
+                exp_success_num+=1
 
             curr_prop_info = env._get_estimation()["denormalsied_output"]
             curr_prop_estimated = env._get_estimation()["denormalsied_output"]
@@ -542,10 +545,14 @@ def main():
             
             if total_episode_num!=0 and prev_total_episode_num!=total_episode_num:
                 success_rate_1env = (infos["log_eval"]["num_success"]/(infos["log_eval"]["num_success"]+infos["log_eval"]["num_failure"]))*100.0
-                print("Success num")
+                print("Total num")
                 print(total_episode_num)
+                print("Success num")
                 print(infos["log_eval"]["num_success"])
+                print("Failure num")
                 print(infos["log_eval"]["num_failure"])
+                print("Exp success num")
+                print(exp_success_num)
                 print(success_rate_1env)
                 success_rate_allenv = infos["log"]["success_rate"]
                 print("All env success rate")
