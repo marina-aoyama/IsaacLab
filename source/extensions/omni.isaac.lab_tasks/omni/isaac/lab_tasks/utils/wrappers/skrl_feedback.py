@@ -246,6 +246,10 @@ class SkrlSequentialLogTrainer_Feedback(Trainer):
             #     infos["log"]["rnn_loss"] = rnn_loss
             infos["log"]["rnn_loss"] = prop_estimator_output["rnn_loss"]
             infos["log"]["rnn_rmse"] = prop_estimator_output["rnn_rmse"]
+            if "rnn_rmse_fric" in prop_estimator_output:
+                infos["log"]["rnn_rmse_fric"] = prop_estimator_output["rnn_rmse_fric"]
+            if "rnn_rmse_com" in prop_estimator_output:
+                infos["log"]["rnn_rmse_com"] = prop_estimator_output["rnn_rmse_com"]
             # print(infos["log"]["rnn_rmse"] )
             if "log" in infos:
                 for k, v in infos["log"].items():

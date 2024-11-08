@@ -199,6 +199,8 @@ class PPO_RNN_PROPEXP(Agent):
             output_size = 1
         elif self.prop_mode=="com": 
             output_size = 2
+        elif self.prop_mode=="fric_com": 
+            output_size = 3
         else: 
             output_size = 2
         # output_size = self.cfg["prop_estimator"]["output_size"]     # Number of physical properties (e.g., friction, CoM)
@@ -376,10 +378,20 @@ class PPO_RNN_PROPEXP(Agent):
             normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
             normalized_curr_rnn_prop_target = normalized_friction
         elif self.prop_mode=="com": 
-            curr_rnn_prop_target = infos["prop"][:,[1,2]]
+            curr_rnn_prop_target = infos["prop"][:,[1,2]]   # (num_envs, 2)
             coms = curr_rnn_prop_target
             normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
-            normalized_curr_rnn_prop_target = normalized_com
+            normalized_curr_rnn_prop_target = normalized_com    # (num_envs, 2)
+        elif self.prop_mode=="fric_com": 
+            curr_rnn_prop_target_fric = infos["prop"][:,0].reshape(-1,1)
+            frictions = curr_rnn_prop_target_fric
+            normalized_friction = normalize(frictions, self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            curr_rnn_prop_target_com = infos["prop"][:,[1,2]]  
+            coms = curr_rnn_prop_target_com
+            normalized_com = normalize(coms, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            
+            curr_rnn_prop_target = torch.cat((frictions, coms), dim=1)
+            normalized_curr_rnn_prop_target = torch.cat((normalized_friction, normalized_com), dim=1)
         else: 
             curr_rnn_prop_target = infos["prop"][:,[1,2]]
             coms = curr_rnn_prop_target
@@ -408,6 +420,13 @@ class PPO_RNN_PROPEXP(Agent):
         elif self.prop_mode=="com": 
             denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
             denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+        elif self.prop_mode=="fric_com": 
+            denormalsied_output_fric = denormalize(normalized_output[:,0].reshape(-1,1), self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target_fric = denormalize(normalized_curr_rnn_prop_target[:,0].reshape(-1,1), self.fric_min, self.fric_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_output_com = denormalize(normalized_output[:,[1,2]], self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_target_com = denormalize(normalized_curr_rnn_prop_target[:,[1,2]], self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
+            denormalsied_output = torch.cat((denormalsied_output_fric, denormalsied_output_com), dim=1)
+            denormalsied_target = torch.cat((denormalsied_target_fric, denormalsied_target_com), dim=1)
         else: 
             denormalsied_output = denormalize(normalized_output, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
             denormalsied_target = denormalize(normalized_curr_rnn_prop_target, self.com_min, self.com_max, self.estimate_target_min, self.estimate_target_max)
@@ -423,7 +442,12 @@ class PPO_RNN_PROPEXP(Agent):
         # rnn_loss = torch.mean(weight*(normalized_output-normalized_curr_rnn_prop_target)**2)
         
         rnn_loss = self.prop_criterion(normalized_output, normalized_curr_rnn_prop_target)
-        rnn_rmse = torch.sqrt(self.prop_criterion(denormalsied_output, curr_rnn_prop_target))
+        if self.prop_mode=="fric" or self.prop_mode=="com": 
+            rnn_rmse = torch.sqrt(self.prop_criterion(denormalsied_output, curr_rnn_prop_target)) 
+        elif self.prop_mode=="fric_com": 
+            rnn_rmse = torch.sqrt(self.prop_criterion(denormalsied_output, curr_rnn_prop_target))
+            rnn_rmse_fric = torch.sqrt(self.prop_criterion(denormalsied_output_fric, curr_rnn_prop_target_fric))
+            rnn_rmse_com = torch.sqrt(self.prop_criterion(denormalsied_output_com, curr_rnn_prop_target_com))
         # print(output)
         # print(loss)
 
@@ -435,13 +459,24 @@ class PPO_RNN_PROPEXP(Agent):
         # print(normalized_output)
         # print(rnn_rmse)
 
-        prop_estimator_output = {
-            "rnn_loss": rnn_loss, 
-            "rnn_rmse": rnn_rmse, 
-            "normalized_output": normalized_output, 
-            "denormalsied_output": denormalsied_output, 
-            "denormalsied_target": denormalsied_target
-        }
+        if self.prop_mode=="fric" or self.prop_mode=="com": 
+            prop_estimator_output = {
+                "rnn_loss": rnn_loss, 
+                "rnn_rmse": rnn_rmse, 
+                "normalized_output": normalized_output, 
+                "denormalsied_output": denormalsied_output, 
+                "denormalsied_target": denormalsied_target
+            }
+        elif self.prop_mode=="fric_com": 
+            prop_estimator_output = {
+                "rnn_loss": rnn_loss, 
+                "rnn_rmse": rnn_rmse, 
+                "rnn_rmse_fric": rnn_rmse_fric, 
+                "rnn_rmse_com": rnn_rmse_com, 
+                "normalized_output": normalized_output, 
+                "denormalsied_output": denormalsied_output, 
+                "denormalsied_target": denormalsied_target
+            }
 
         # with torch.no_grad():
         #     for batch_idx, (inputs, targets) in enumerate(test_loader):

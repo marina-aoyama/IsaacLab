@@ -14,7 +14,7 @@ models:
     hiddens: [256, 128, 64]
     hidden_activation: ["elu", "elu", "elu"]
     output_shape: "Shape.ACTIONS"
-    output_activation: ""
+    output_activation: "tanh"
     output_scale: 1.0
   value:  # see 'skrl.utils.model_instantiators.torch.deterministic_model' for parameter details
     clip_actions: False
@@ -31,10 +31,10 @@ models:
 agent:
   rollouts: 16
   learning_epochs: 8
-  mini_batches: 8 # 32 for task with 8192envs? 8 for exploration
+  mini_batches: 32 # 32 for task with 8192envs? 8 for exploration
   discount_factor: 0.99
   lambda: 0.95
-  learning_rate: 5.e-4  # 3.e-4 for task? 5.e-4 
+  learning_rate: 3.e-4  # 3.e-4 for task? 5.e-4 
   learning_rate_scheduler: "KLAdaptiveLR"
   learning_rate_scheduler_kwargs:
     kl_threshold: 0.008
@@ -173,5 +173,5 @@ prop_estimator:
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
-  timesteps: 12000 # 6000 # 24000 # 24000
+  timesteps: 6000 # 24000 # 24000
   environment_info: "log"

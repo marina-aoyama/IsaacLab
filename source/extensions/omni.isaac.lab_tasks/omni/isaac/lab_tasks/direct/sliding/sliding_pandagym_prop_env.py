@@ -532,18 +532,28 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.goal_threshold = 0.1
 
         # property estimation goal
+        self.prop_estimate_threshold = []
         if self.prop_mode=="fric": 
-            self.prop_estimate_threshold = 0.05
+            # self.prop_estimate_threshold[0] = 0.05
+            self.prop_estimate_threshold.append(0.05) 
         elif self.prop_mode=="com": 
             if self.train_model=="train": 
                 if self.pre_trained_models_cfg["training_itr"] == 0: 
-                    self.prop_estimate_threshold = 0.01 # 0.005
+                    # self.prop_estimate_threshold[0] = 0.01 # 0.005
+                    self.prop_estimate_threshold.append(0.01) 
                 else: 
-                    self.prop_estimate_threshold = 0.005 # 0.005
+                    # self.prop_estimate_threshold[0] = 0.005 # 0.005
+                    self.prop_estimate_threshold.append(0.005) 
             else: 
-                self.prop_estimate_threshold = 0.005 # 0.005
+                # self.prop_estimate_threshold[0] = 0.005 # 0.005
+                self.prop_estimate_threshold.append(0.005) 
+        elif self.prop_mode=="fric_com": 
+            self.prop_estimate_threshold.append(0.05) 
+            # self.prop_estimate_threshold.append(0.01) 
+            self.prop_estimate_threshold.append(0.005) 
         else:  
-            self.prop_estimate_threshold = 0.05
+            # self.prop_estimate_threshold[0] = 0.05
+            self.prop_estimate_threshold.append(0.05) 
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing
         self.rew_scale_goal_exp = self.cfg.rew_scale_goal_exp
         
@@ -777,6 +787,8 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # print("Env pre-physics called!!!!")
         self.actions = self.action_scale * actions.clone()
+        # self.actions[:, 0] = self.actions[:, 0] * 2.0
+        # self.actions[:, 1] = self.actions[:, 1] * 2.0
         # self.actions[self.actions < -2.0] = -2.0
         # self.actions[:,0][self.episode_length_buf <4] = -1.0
         # self.actions[:,1] = -0.0
@@ -1168,15 +1180,24 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # print(self.denormalsied_target)
         # print(self.groundtruth_prop)
         if self.prop_mode=="fric": 
+            # print(self.denormalsied_output.shape)
+            # print(self.denormalsied_target.shape)
             squared_error = (self.denormalsied_output - self.denormalsied_target) ** 2
             self.prop_rmse_eachenv = torch.sqrt(squared_error).squeeze() 
             if self.prop_rmse_eachenv.numel() == 1 and self.prop_rmse_eachenv.dim() == 0:
                 self.prop_rmse_eachenv = self.prop_rmse_eachenv.unsqueeze(0)
         elif self.prop_mode=="com": 
             self.prop_rmse_eachenv = torch.sqrt(((self.denormalsied_output - self.denormalsied_target) ** 2).sum(dim=1))
+        elif self.prop_mode=="fric_com": 
+            squared_error = (self.denormalsied_output[:,0].reshape(-1,1) - self.denormalsied_target[:,0].reshape(-1,1)) ** 2
+            self.prop_rmse_eachenv_fric = torch.sqrt(squared_error).squeeze() 
+            if self.prop_rmse_eachenv_fric.numel() == 1 and self.prop_rmse_eachenv_fric.dim() == 0:
+                self.prop_rmse_eachenv_fric = self.prop_rmse_eachenv_fric.unsqueeze(0)
+            
+            self.prop_rmse_eachenv_com = torch.sqrt(((self.denormalsied_output[:,[1,2]] - self.denormalsied_target[:,[1,2]]) ** 2).sum(dim=1))
+            self.prop_rmse_eachenv = torch.stack((self.prop_rmse_eachenv_fric, self.prop_rmse_eachenv_com), dim=1)
         else: 
             self.prop_rmse_eachenv = torch.sqrt(((self.denormalsied_output - self.denormalsied_target) ** 2).sum(dim=1))
-
 
         # print("each env error")
         # print(self.prop_rmse_eachenv) 
@@ -1364,7 +1385,12 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         self.out_of_bounds_goal_pushing_puck_pos_count[~curr_out_of_bounds_goal_pushing_puck_pos_count] = 0
         
         # Goal for exploration
-        curr_out_of_bounds_goal_prop_estimate_count = self.prop_rmse_eachenv < self.prop_estimate_threshold
+        if self.prop_mode=="fric" or self.prop_mode=="com": 
+            curr_out_of_bounds_goal_prop_estimate_count = self.prop_rmse_eachenv < self.prop_estimate_threshold[0]
+        elif self.prop_mode=="fric_com": 
+            curr_out_of_bounds_goal_prop_estimate_count_fric = self.prop_rmse_eachenv[:,0] < self.prop_estimate_threshold[0]
+            curr_out_of_bounds_goal_prop_estimate_count_com = self.prop_rmse_eachenv[:,1] < self.prop_estimate_threshold[1]
+            curr_out_of_bounds_goal_prop_estimate_count = curr_out_of_bounds_goal_prop_estimate_count_fric | curr_out_of_bounds_goal_prop_estimate_count_com
 
         self.out_of_bounds_goal_prop_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count.int()
 

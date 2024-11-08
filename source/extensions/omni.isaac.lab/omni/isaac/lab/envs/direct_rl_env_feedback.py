@@ -160,6 +160,8 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.episode_failed = torch.zeros_like(self.reset_terminated)
         self.success_record = torch.zeros_like(self.reset_terminated)
         self.end_rmse_record = torch.zeros_like(self.reset_terminated)
+        self.end_rmse_record_fric = torch.zeros_like(self.reset_terminated)
+        self.end_rmse_record_com = torch.zeros_like(self.reset_terminated)
         self.num_success = 0
         self.num_failure = 0
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
@@ -326,21 +328,29 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.success_record = torch.where(failed_tensor, torch.tensor(False, dtype=torch.bool), self.success_record)
 
         end_rmse_record_mean = 0.0
+        end_rmse_record_mean_fric = 0.0
+        end_rmse_record_mean_com = 0.0
         if "curr_rmse" in done_info: 
             curr_rmse = done_info["curr_rmse"]
             # print(curr_rmse.shape)
             end_tensor = success_tensor | failed_tensor
             # self.end_rmse_record = torch.where(end_tensor, torch.tensor(True, dtype=torch.bool), self.success_record)
-            self.end_rmse_record = torch.where(end_tensor, curr_rmse, self.end_rmse_record)
-            # print("End")
-            # print(end_tensor)
-            # print(curr_rmse)
-            # print(self.end_rmse_record)
-            # print(self.end_rmse_record)
-            # print(self.end_rmse_record.mean())
-            end_rmse_record_mean = self.end_rmse_record.mean()
-            # print(end_rmse_record_mean)
-
+            if self.prop_mode=="fric" or self.prop_mode=="com": 
+                self.end_rmse_record = torch.where(end_tensor, curr_rmse, self.end_rmse_record)
+                # print("End")
+                # print(end_tensor)
+                # print(curr_rmse)
+                # print(self.end_rmse_record)
+                # print(self.end_rmse_record)
+                # print(self.end_rmse_record.mean())
+                end_rmse_record_mean = self.end_rmse_record.mean()
+                # print(end_rmse_record_mean)
+            elif self.prop_mode=="fric_com": 
+                self.end_rmse_record_fric = torch.where(end_tensor, curr_rmse[:,0], self.end_rmse_record)
+                end_rmse_record_mean_fric = self.end_rmse_record_fric.mean()
+                self.end_rmse_record_com = torch.where(end_tensor, curr_rmse[:,1], self.end_rmse_record)
+                end_rmse_record_mean_com = self.end_rmse_record_com.mean()
+            
             self.extras["prop_estimation"] = {
                 "curr_rmse": done_info["curr_rmse"], 
             } 
@@ -418,9 +428,14 @@ class DirectRLEnvFeedback(DirectRLEnv):
         # print(self.num_envs)
         # print(success_rate)
 
-        self.extras["log"] = {"success_rate": success_rate, 
+        if self.prop_mode=="fric" or self.prop_mode=="com": 
+            self.extras["log"] = {"success_rate": success_rate, 
                               "end_rmse": end_rmse_record_mean}
-
+        elif self.prop_mode=="fric_com": 
+            self.extras["log"] = {"success_rate": success_rate, 
+                                    "end_rmse_fric": end_rmse_record_mean_fric, 
+                                    "end_rmse_com": end_rmse_record_mean_com}
+        
         if "exp_traj" in self.obs_buf: 
             self.extras["two_phase"] = {"episode_length_buf": self.episode_length_buf, 
                                          "exp_traj": self.obs_buf['exp_traj']}

@@ -377,6 +377,27 @@ def main():
                     # # checkpoint1
                     # print("normalised prop")
                     # print(normalised_expend_prop_info)
+                elif prop_mode=="fric_com": 
+
+                    # Normalise friction
+                    dynamic_frictions_min = 0.05
+                    dynamic_frictions_max = 0.3
+                    state_norm_min = -2
+                    state_norm_max = 2
+
+                    normalised_expend_prop_info_fric = normalize(expend_prop_info[:,0], dynamic_frictions_min, dynamic_frictions_max, state_norm_min, state_norm_max)
+                    normalised_expend_prop_info_fric = normalised_expend_prop_info_fric.reshape(-1,1)
+
+                    # Normalise com
+                    com_min = -0.02
+                    com_max = 0.02
+                    state_norm_min = -2
+                    state_norm_max = 2
+
+                    normalised_expend_prop_info_com = (expend_prop_info[:,[1,2]] - com_min) / (com_max - com_min)
+
+                    normalised_expend_prop_info = torch.cat((normalised_expend_prop_info_fric, normalised_expend_prop_info_com), dim=1)
+
                 else: 
                     normalised_expend_prop_info = expend_prop_info
                     # print("current info")
@@ -421,6 +442,10 @@ def main():
                             obs_task[curr_task_phase, 11] = normalised_expend_prop_info[curr_task_phase, 1]
                             # obs_task[curr_task_phase, :][:, [10, 11]] = normalised_expend_prop_info[curr_task_phase, :][:, [0, 1]]
                             # obs_task[curr_task_phase, [10,11]] = normalised_expend_prop_info[curr_task_phase, [0,1]]
+                        elif prop_mode=="fric_com": 
+                            obs_task[curr_task_phase, 10] = normalised_expend_prop_info[curr_task_phase, 0]
+                            obs_task[curr_task_phase, 11] = normalised_expend_prop_info[curr_task_phase, 1]  
+                            obs_task[curr_task_phase, 12] = normalised_expend_prop_info[curr_task_phase, 2]    
                         
                     # if curr_task_phase.any():
                     #     if prop_mode=="fric": 
