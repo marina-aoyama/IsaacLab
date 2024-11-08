@@ -184,6 +184,10 @@ def main():
     # wandb_kwargs.setdefault("sync_tensorboard", True)
     # wandb_kwargs.setdefault("config", {})
 
+    decimation_rate = env.cfg.decimation
+    physics_time_step = 1 / 120# Calculate step duration
+    step_duration = decimation_rate * physics_time_step  # in seconds# Calculate total time in seconds
+
     # init Weights & Biases
     import wandb
     run = wandb.init(
@@ -213,6 +217,10 @@ def main():
             actions = outputs["mean_actions"]
             
             # get prop estimate
+            # print("denormalsied_target")
+            # print(prop_estimator_output["denormalsied_target"])
+            # print("denormalsied_output")
+            # print(prop_estimator_output["denormalsied_output"])
             prop_info = {}
             prop_info["prop_estimator_output"] = prop_estimator_output
             # print("Prop info")
@@ -269,13 +277,16 @@ def main():
                 print("All env success rate")
                 print(success_rate_allenv)
 
+                end_timestep = infos["log_eval"]["end_timestep"]
+                end_timestep_seconds = end_timestep * step_duration
+
                 if "log" in infos and "end_rmse" in infos["log"]:
                     end_rmse = infos["log"]["end_rmse"]
                     # print(infos["log"]["end_rmse"])
                     # print(end_rmse)       
-                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse": end_rmse})
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse": end_rmse, "end_timestep": end_timestep, "end_timestep_seconds": end_timestep_seconds})
                 else: 
-                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv})
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_timestep": end_timestep, "end_timestep_seconds":end_timestep_seconds})
                 prev_total_episode_num = total_episode_num 
 
             # print(total_episode_num)

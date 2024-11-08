@@ -162,6 +162,7 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.end_rmse_record = torch.zeros_like(self.reset_terminated)
         self.end_rmse_record_fric = torch.zeros_like(self.reset_terminated)
         self.end_rmse_record_com = torch.zeros_like(self.reset_terminated)
+        self.end_timestep_record = torch.zeros_like(self.reset_terminated)
         self.num_success = 0
         self.num_failure = 0
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
@@ -346,15 +347,25 @@ class DirectRLEnvFeedback(DirectRLEnv):
                 end_rmse_record_mean = self.end_rmse_record.mean()
                 # print(end_rmse_record_mean)
             elif self.prop_mode=="fric_com": 
-                self.end_rmse_record_fric = torch.where(end_tensor, curr_rmse[:,0], self.end_rmse_record)
+                self.end_rmse_record_fric = torch.where(end_tensor, curr_rmse[:,0], self.end_rmse_record_fric)
                 end_rmse_record_mean_fric = self.end_rmse_record_fric.mean()
-                self.end_rmse_record_com = torch.where(end_tensor, curr_rmse[:,1], self.end_rmse_record)
+                self.end_rmse_record_com = torch.where(end_tensor, curr_rmse[:,1], self.end_rmse_record_com)
                 end_rmse_record_mean_com = self.end_rmse_record_com.mean()
             
             self.extras["prop_estimation"] = {
                 "curr_rmse": done_info["curr_rmse"], 
             } 
 
+        # Log episode length
+        end_tensor = success_tensor | failed_tensor
+        self.end_timestep_record = torch.where(end_tensor, self.episode_length_buf, self.end_timestep_record)
+        end_timestep_record_mean = self.end_timestep_record.float().mean()
+        
+        # print(end_tensor)
+        # print(self.episode_length_buf) 
+        # print(self.end_timestep_record)
+        # print(end_timestep_record_mean)
+        
         # print("transition_to_task_idx")
         # print(self.transition_to_task_idx)
         if self.transition_to_task_idx is not None: 
@@ -419,7 +430,8 @@ class DirectRLEnvFeedback(DirectRLEnv):
         if failed_tensor[0]==True:
             self.num_failure+=1
         self.extras["log_eval"] = {"num_success": self.num_success, 
-                                   "num_failure": self.num_failure}
+                                   "num_failure": self.num_failure, 
+                                   "end_timestep": end_timestep_record_mean}
 
         # print(self.success_record.int())
 
