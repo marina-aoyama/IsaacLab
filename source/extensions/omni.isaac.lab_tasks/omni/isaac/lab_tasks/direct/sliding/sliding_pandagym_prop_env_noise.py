@@ -172,7 +172,7 @@ class EventCfg_FricCoM:
   # Juan's pushing randomisation: distribution_parameters: [[0.5, 0.2, 0.4], [0.7, 0.4, 0.6]]
 
 @configclass
-class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
+class SlidingPandaGymPropNoiseEnvCfg(DirectRLEnvCfg):
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1 / 120)
 
@@ -198,6 +198,28 @@ class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
     obs_vel_noise_std = 0.06 # 0.06  # sigma = 0.06m/s
     obs_rot_noise_mean = 0.0
     obs_rot_noise_std = 0.01
+
+    puck_pos_noise_step_mean = 0.0
+    puck_pos_noise_step_std = 0.0025 
+    puck_vel_noise_step_mean = 0.0
+    puck_vel_noise_step_std = 0.06 
+    puck_rot_noise_step_mean = 0.0
+    puck_rot_noise_step_std = 0.01
+    pusher_pos_noise_step_mean = 0.0
+    pusher_pos_noise_step_std = 0.0025 
+    pusher_vel_noise_step_mean = 0.0
+    pusher_vel_noise_step_std = 0.06 
+
+    puck_pos_noise_epi_mean = 0.0
+    puck_pos_noise_epi_std = 0.0025 
+    puck_vel_noise_epi_mean = 0.0
+    puck_vel_noise_epi_std = 0.06 
+    puck_rot_noise_epi_mean = 0.0
+    puck_rot_noise_epi_std = 0.01
+    pusher_pos_noise_epi_mean = 0.0
+    pusher_pos_noise_epi_std = 0.0025 
+    pusher_vel_noise_epi_mean = 0.0
+    pusher_vel_noise_epi_std = 0.06 
 
     obs_fric_noise_mean = 0.0
     obs_fric_noise_std = 0.05 # 0.06  # sigma = 0.06m/s
@@ -434,10 +456,10 @@ class SlidingPandaGymPropEnvCfg(DirectRLEnvCfg):
     rew_scale_goal_pushing = 30.0
     rew_scale_goal_exp = 30.0
 
-class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
-    cfg: SlidingPandaGymPropEnvCfg
+class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
+    cfg: SlidingPandaGymPropNoiseEnvCfg
 
-    def __init__(self, cfg: SlidingPandaGymPropEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: SlidingPandaGymPropNoiseEnvCfg, render_mode: str | None = None, **kwargs):
         # print("Env init called!!!!")
 
         # Load run env config
@@ -673,7 +695,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # rnn_num_layers = self.prop_estimator_dict["num_layers"]
         # rnn_output_size = self.prop_estimator_dict["output_size"]
 
-        # self.rnn_prop_model = rnnmodel.RNNPropertyEstimator(rnn_input_size, rnn_hidden_size, rnn_num_layers, rnn_output_size).to(self.scene.env_origins.device)
+        # self.rnn_prop_model = rnnmodel.RNNPropertyEstimator(rnn_input_size, rnn_hidden_size, rnn_num_layers, rnn_output_size, device=self.scene.env_origins.device)
 
         # # Load the learnt model
         # self.rnn_prop_model.load_state_dict(torch.load(self.prop_estimator_dict["model_path"], map_location=torch.device(self.scene.env_origins.device)))
@@ -698,10 +720,17 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         # ### Prop estimation (offline) END ###
 
         # Episodic noises
-        self.obs_pos_noise_epi = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_vel_noise_epi = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_rot_noise_epi = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_fric_noise_epi = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
+        self.obs_pos_noise_epi = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_vel_noise_epi = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_rot_noise_epi = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_fric_noise_epi = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+
+        # Episodic noise
+        self.puck_pos_noise_epi = torch.normal(self.cfg.puck_pos_noise_epi_mean, self.cfg.puck_pos_noise_epi_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_vel_noise_epi = torch.normal(self.cfg.puck_vel_noise_epi_mean, self.cfg.puck_vel_noise_epi_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_rot_noise_epi = torch.normal(self.cfg.puck_rot_noise_epi_mean, self.cfg.puck_rot_noise_epi_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_pos_noise_epi = torch.normal(self.cfg.pusher_pos_noise_epi_mean, self.cfg.pusher_pos_noise_epi_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_vel_noise_epi = torch.normal(self.cfg.pusher_vel_noise_epi_mean, self.cfg.pusher_vel_noise_epi_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
 
         # Property estimation
         self.rnn_rmse = None
@@ -850,6 +879,15 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
     def _get_observations(self) -> dict:
         # print("Env get observations called!!!!")
+
+        # Step-wise noise
+        self.puck_pos_noise_step = torch.normal(self.cfg.puck_pos_noise_step_mean, self.cfg.puck_pos_noise_step_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_vel_noise_step = torch.normal(self.cfg.puck_vel_noise_step_mean, self.cfg.puck_vel_noise_step_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_rot_noise_step = torch.normal(self.cfg.puck_rot_noise_step_mean, self.cfg.puck_rot_noise_step_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_pos_noise_step = torch.normal(self.cfg.pusher_pos_noise_step_mean, self.cfg.pusher_pos_noise_step_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_vel_noise_step = torch.normal(self.cfg.pusher_vel_noise_step_mean, self.cfg.pusher_vel_noise_step_std, size=(self.scene.env_origins.shape[0],2), generator=self.env_rng, device=self.scene.env_origins.device)
+        
+        # self.obs_fric_noise_step = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1), device=self.scene.env_origins.device)
         
         # Pusher state
         curr_cuboidpusher2_state = self.cuboidpusher2_state.clone()
@@ -859,7 +897,11 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # Pusher pos
         # normalized_curr_pusher_pos = (curr_cuboidpusher2_state[:, self.state_pos_idx] - self.object_location_normmin) / (self.object_location_normmax - self.object_location_normmin)
-        curr_pusher_pos = curr_cuboidpusher2_state[:, self.state_pos_idx]
+        curr_pusher_pos = curr_cuboidpusher2_state[:, self.state_pos_idx] + self.pusher_pos_noise_step + self.pusher_pos_noise_epi
+        # print("cirrent pusher pos")
+        # print(curr_pusher_pos.shape)
+        # print("noise shape")
+        # print(self.puck_pos_noise_step.shape)
         normalized_curr_pusher_pos = normalize(curr_pusher_pos, self.object_location_normmin, self.object_location_normmax, self.state_norm_min, self.state_norm_max)
         # normalized_curr_pusher_pos = normalize(curr_cuboidpusher2_state[:, self.state_pos_idx], self.object_location_normmin, self.object_location_normmax, self.state_norm_min, self.state_norm_max)
         self.past_pusher_pos.append(normalized_curr_pusher_pos.unsqueeze(0))
@@ -869,7 +911,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # Pusher vel
         # normalized_curr_pusher_vel = (curr_cuboidpusher2_state[:, self.state_vel_idx] - self.object_vel_normmin) / (self.object_vel_normmax - self.object_vel_normmin)
-        curr_pusher_vel = curr_cuboidpusher2_state[:, self.state_vel_idx]
+        curr_pusher_vel = curr_cuboidpusher2_state[:, self.state_vel_idx] + self.pusher_vel_noise_step + self.pusher_vel_noise_epi
         normalized_curr_pusher_vel = normalize(curr_pusher_vel, self.object_vel_normmin, self.object_vel_normmax, self.state_norm_min, self.state_norm_max)
         # normalized_curr_pusher_vel = normalize(curr_cuboidpusher2_state[:, self.state_vel_idx], self.object_vel_normmin, self.object_vel_normmax, self.state_norm_min, self.state_norm_max)
         self.past_pusher_vel.append(normalized_curr_pusher_vel.unsqueeze(0))
@@ -885,8 +927,8 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # Puck pos
         # normalized_curr_puck_pos = (curr_cylinderpuck2_state[:, self.state_pos_idx] - self.object_location_normmin) / (self.object_location_normmax - self.object_location_normmin)
-        raw_curr_puck_pos = curr_cylinderpuck2_state[:, self.state_pos_idx]
-        normalized_curr_puck_pos = normalize(raw_curr_puck_pos, self.object_location_normmin, self.object_location_normmax, self.state_norm_min, self.state_norm_max)
+        curr_puck_pos = curr_cylinderpuck2_state[:, self.state_pos_idx] + self.puck_pos_noise_step + self.puck_pos_noise_epi
+        normalized_curr_puck_pos = normalize(curr_puck_pos, self.object_location_normmin, self.object_location_normmax, self.state_norm_min, self.state_norm_max)
         # normalized_curr_puck_pos = normalize(curr_cylinderpuck2_state[:, self.state_pos_idx], self.object_location_normmin, self.object_location_normmax, self.state_norm_min, self.state_norm_max)
         self.past_puck_pos.append(normalized_curr_puck_pos.unsqueeze(0))
         self.past_puck_pos = self.past_puck_pos[-self.past_timestep:]
@@ -895,7 +937,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
 
         # Puck vel
         # normalized_curr_puck_vel = (curr_cylinderpuck2_state[:, self.state_vel_idx] - self.object_vel_normmin) / (self.object_vel_normmax - self.object_vel_normmin)
-        curr_puck_vel = curr_cylinderpuck2_state[:, self.state_vel_idx]
+        curr_puck_vel = curr_cylinderpuck2_state[:, self.state_vel_idx] + self.puck_vel_noise_step + self.puck_vel_noise_epi
         normalized_curr_puck_vel = normalize(curr_puck_vel, self.object_vel_normmin, self.object_vel_normmax, self.state_norm_min, self.state_norm_max)
         # normalized_curr_puck_vel = normalize(curr_cylinderpuck2_state[:, self.state_vel_idx], self.object_vel_normmin, self.object_vel_normmax, self.state_norm_min, self.state_norm_max)
         self.past_puck_vel.append(normalized_curr_puck_vel.unsqueeze(0))
@@ -904,7 +946,7 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         normalized_past_puck_vel_obs  = past_puck_vel_tensor
 
         # Puck orientation
-        curr_puck_rot = curr_cylinderpuck2_state[:, self.state_rot_idx]
+        curr_puck_rot = curr_cylinderpuck2_state[:, self.state_rot_idx] + self.puck_rot_noise_step + self.puck_rot_noise_epi
         normalized_curr_puck_rot = normalize(curr_puck_rot, self.object_rot_normmin, self.object_rot_normmax, self.state_norm_min, self.state_norm_max)
         # normalized_curr_puck_rot = normalize(curr_cylinderpuck2_state[:, self.state_rot_idx], self.object_rot_normmin, self.object_rot_normmax, self.state_norm_min, self.state_norm_max)
         self.past_puck_rot.append(normalized_curr_puck_rot.unsqueeze(0))
@@ -1024,20 +1066,20 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         unreachable_max_puck_pos = unreachable_max_puck_posx | unreachable_min_puck_posx
         
         # Step-wise noise
-        self.obs_pos_noise_step = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_vel_noise_step = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_rot_noise_step = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
-        self.obs_fric_noise_step = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1)).to(self.scene.env_origins.device)
+        self.obs_pos_noise_step = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_vel_noise_step = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_rot_noise_step = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_fric_noise_step = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
 
-        normalized_past_puck_pos_obs_x = normalized_past_puck_pos_obs[:,:,0].T + self.obs_pos_noise_step + self.obs_pos_noise_epi
-        normalized_past_puck_pos_obs_y = normalized_past_puck_pos_obs[:,:,1].T + self.obs_pos_noise_step + self.obs_pos_noise_epi
-        normalized_past_puck_vel_obs_x = normalized_past_puck_vel_obs[:,:,0].T + self.obs_vel_noise_step + self.obs_vel_noise_epi 
-        normalized_past_puck_vel_obs_y = normalized_past_puck_vel_obs[:,:,1].T + self.obs_vel_noise_step + self.obs_vel_noise_epi 
+        normalized_past_puck_pos_obs_x = normalized_past_puck_pos_obs[:,:,0].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
+        normalized_past_puck_pos_obs_y = normalized_past_puck_pos_obs[:,:,1].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
+        normalized_past_puck_vel_obs_x = normalized_past_puck_vel_obs[:,:,0].T # + self.obs_vel_noise_step + self.obs_vel_noise_epi 
+        normalized_past_puck_vel_obs_y = normalized_past_puck_vel_obs[:,:,1].T # + self.obs_vel_noise_step + self.obs_vel_noise_epi 
         normalized_past_puck_rot_obs_yaw = normalized_past_puck_rot_obs[:,:,0].T + self.obs_rot_noise_step + self.obs_rot_noise_epi 
-        normalized_past_pusher_pos_obs_x = normalized_past_pusher_pos_obs[:,:,0].T + self.obs_pos_noise_step + self.obs_pos_noise_epi
-        normalized_past_pusher_pos_obs_y = normalized_past_pusher_pos_obs[:,:,1].T + self.obs_pos_noise_step + self.obs_pos_noise_epi
-        normalized_past_pusher_vel_obs_x = normalized_past_pusher_vel_obs[:,:,0].T + self.obs_vel_noise_step + self.obs_vel_noise_epi 
-        normalized_past_pusher_vel_obs_y = normalized_past_pusher_vel_obs[:,:,1].T + self.obs_vel_noise_step + self.obs_vel_noise_epi 
+        normalized_past_pusher_pos_obs_x = normalized_past_pusher_pos_obs[:,:,0].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
+        normalized_past_pusher_pos_obs_y = normalized_past_pusher_pos_obs[:,:,1].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
+        normalized_past_pusher_vel_obs_x = normalized_past_pusher_vel_obs[:,:,0].T # + self.obs_vel_noise_step + self.obs_vel_noise_epi 
+        normalized_past_pusher_vel_obs_y = normalized_past_pusher_vel_obs[:,:,1].T # + self.obs_vel_noise_step + self.obs_vel_noise_epi 
 
         # Noise on groundtruth properties
         # normalized_dynamic_frictions = normalized_dynamic_frictions + self.obs_fric_noise_step + self.obs_fric_noise_epi 
@@ -1531,14 +1573,27 @@ class SlidingPandaGymPropEnv(DirectRLEnvFeedback):
         super()._reset_idx(env_ids)
 
         # Episode noise
-        self.obs_pos_noise_epi_new = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(len(env_ids),1)).to(self.scene.env_origins.device)
-        self.obs_vel_noise_epi_new = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(len(env_ids),1)).to(self.scene.env_origins.device)
-        self.obs_rot_noise_epi_new = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(len(env_ids),1)).to(self.scene.env_origins.device)
-        self.obs_fric_noise_epi_new = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(len(env_ids),1)).to(self.scene.env_origins.device)
+        self.obs_pos_noise_epi_new = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_vel_noise_epi_new = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_rot_noise_epi_new = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.obs_fric_noise_epi_new = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.obs_pos_noise_epi[env_ids, :] = self.obs_pos_noise_epi_new
         self.obs_vel_noise_epi[env_ids, :] = self.obs_vel_noise_epi_new
         self.obs_rot_noise_epi[env_ids, :] = self.obs_rot_noise_epi_new
         self.obs_fric_noise_epi[env_ids, :] = self.obs_fric_noise_epi_new
+
+        # Episode noise
+        self.puck_pos_noise_epi_new = torch.normal(self.cfg.puck_pos_noise_epi_mean, self.cfg.puck_pos_noise_epi_std, size=(len(env_ids),2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_vel_noise_epi_new = torch.normal(self.cfg.puck_vel_noise_epi_mean, self.cfg.puck_vel_noise_epi_std, size=(len(env_ids),2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.puck_rot_noise_epi_new = torch.normal(self.cfg.puck_rot_noise_epi_mean, self.cfg.puck_rot_noise_epi_std, size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_pos_noise_epi_new = torch.normal(self.cfg.pusher_pos_noise_epi_mean, self.cfg.pusher_pos_noise_epi_std, size=(len(env_ids),2), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.pusher_vel_noise_epi_new = torch.normal(self.cfg.pusher_vel_noise_epi_mean, self.cfg.pusher_vel_noise_epi_std, size=(len(env_ids),2), generator=self.env_rng, device=self.scene.env_origins.device)
+
+        self.puck_pos_noise_epi[env_ids, :] = self.puck_pos_noise_epi_new
+        self.puck_vel_noise_epi[env_ids, :] = self.puck_vel_noise_epi_new
+        self.puck_rot_noise_epi[env_ids, :] = self.puck_rot_noise_epi_new
+        self.pusher_pos_noise_epi[env_ids, :] = self.pusher_pos_noise_epi_new
+        self.pusher_vel_noise_epi[env_ids, :] = self.pusher_vel_noise_epi_new
 
         # Past obs (prop) 
         # print("Past obs shapeee")

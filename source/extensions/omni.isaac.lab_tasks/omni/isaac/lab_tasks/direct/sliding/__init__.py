@@ -20,6 +20,7 @@ from .sliding_pandagym_embedding_env import SlidingPandaGymEmbeddingEnv, Sliding
 from .sliding_pandagym_prop_env import SlidingPandaGymPropEnv, SlidingPandaGymPropEnvCfg
 from .sliding_pandagym_exp2_env import SlidingPandaGymExp2Env, SlidingPandaGymExp2EnvCfg
 from .sliding_pandagym_lowfric_env import SlidingPandaGymLowFricEnv, SlidingPandaGymLowFricEnvCfg
+from .sliding_pandagym_prop_env_noise import SlidingPandaGymPropNoiseEnv, SlidingPandaGymPropNoiseEnvCfg
 
 from . import run_env_cfg
 
@@ -246,4 +247,17 @@ gym.register(
     },
 )
 
-
+gym.register(
+    id="Isaac-Sliding-Direct-v15",
+    entry_point="omni.isaac.lab_tasks.direct.sliding:SlidingPandaGymPropNoiseEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": SlidingPandaGymPropNoiseEnvCfg,
+        "rl_games_cfg_entry_point": f"{agents.__name__}:rl_games_ppo_cfg.yaml",
+        "rsl_rl_cfg_entry_point": agents.rsl_rl_ppo_cfg.CartpolePPORunnerCfg,
+        "skrl_cfg_entry_point": f"{agents.__name__}:skrl_ppo_franka_cfg.yaml",
+        "skrl_exp_cfg_entry_point": f"{agents.__name__}:skrl_ppo_preexp_cfg.yaml",
+        "sb3_cfg_entry_point": f"{agents.__name__}:sb3_ppo_cfg.yaml",
+        "run_env_cfg": "/workspace/isaaclab/source/extensions/omni.isaac.lab_tasks/omni/isaac/lab_tasks/direct/sliding/run_env_cfg/sliding_env_cfg.yaml"
+    },
+)
