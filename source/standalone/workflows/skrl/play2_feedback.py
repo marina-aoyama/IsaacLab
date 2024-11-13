@@ -285,6 +285,12 @@ def main():
                     # print(infos["log"]["end_rmse"])
                     # print(end_rmse)       
                     wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse": end_rmse, "end_timestep": end_timestep, "end_timestep_seconds": end_timestep_seconds})
+                if "log" in infos and "end_rmse_fric" in infos["log"]:
+                    end_rmse_fric = infos["log"]["end_rmse_fric"]
+                    end_rmse_com = infos["log"]["end_rmse_com"]
+                    # print(infos["log"]["end_rmse"])
+                    # print(end_rmse)       
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse_fric": end_rmse_fric, "end_rmse_com": end_rmse_com, "end_timestep": end_timestep, "end_timestep_seconds": end_timestep_seconds})
                 else: 
                     wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_timestep": end_timestep, "end_timestep_seconds":end_timestep_seconds})
                 prev_total_episode_num = total_episode_num 
