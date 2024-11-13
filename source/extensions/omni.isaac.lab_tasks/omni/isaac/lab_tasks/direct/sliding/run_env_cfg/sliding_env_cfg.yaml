@@ -42,9 +42,7 @@ pre_trained_models:
 #   # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-08_13-47-48/checkpoints_prop/LSTM_best.pth"
 #   # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-08_13-57-12/checkpoints_prop/LSTM_best.pth"
 #   # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-08_14-34-12/checkpoints_prop/LSTM_best.pth"
-#   # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_13-35-19/checkpoints_prop/LSTM_best.pth"
-#   # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_12-04-56/checkpoints_prop/LSTM_best.pth"
-#   pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_16-02-33/checkpoints_prop/LSTM_best.pth"
+#   pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_13-35-19/checkpoints_prop/LSTM_best.pth"
 #   freeze_weights: True
 #   rew_pushing: False
 #   training_itr: 0
@@ -58,11 +56,7 @@ pre_trained_models:
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-02_23-05-24/checkpoints_prop/LSTM_best.pth"
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-02_23-05-24/checkpoints_prop/LSTM_best.pth"
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_13-50-06/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_14-21-07/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_12-04-56/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_16-02-33/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_16-10-25/checkpoints_prop/LSTM_best.pth"
-  # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_18-21-32/checkpoints_prop/LSTM_best.pth"
+  # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_14-21-07/checkpoints_prop/LSTM_best.pth"
   # freeze_weights: False
   # rew_pushing: False
   # training_itr: 1
@@ -75,13 +69,9 @@ pre_trained_models:
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-10-31_21-50-28/checkpoints_prop/LSTM_best.pth"
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_00-28-12/checkpoints_prop/LSTM_best.pth"
   # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_00-28-12/checkpoints_prop/LSTM_960.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_14-03-19/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_16-10-25/checkpoints_prop/LSTM_best.pth"
-  # # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_18-21-32/checkpoints_prop/LSTM_best.pth"
-  # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-13_18-33-46/checkpoints_prop/LSTM_best.pth"
+  # pre_trained_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-11-03_14-03-19/checkpoints_prop/LSTM_best.pth"
   # freeze_weights: True
   # rew_pushing: False
-  # training_itr: 1
 
   # Pre-trained exploration policy
   # pre_trained_policy_path: "/workspace/isaaclab/logs/skrl/sliding_direct/2024-10-25_16-16-25/checkpoints/best_agent.pt"
