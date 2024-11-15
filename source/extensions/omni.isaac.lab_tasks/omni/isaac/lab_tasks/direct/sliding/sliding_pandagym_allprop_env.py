@@ -172,7 +172,7 @@ class EventCfg_FricCoM:
   # Juan's pushing randomisation: distribution_parameters: [[0.5, 0.2, 0.4], [0.7, 0.4, 0.6]]
 
 @configclass
-class SlidingPandaGymPropNoiseEnvCfg(DirectRLEnvCfg):
+class SlidingPandaGymAllPropEnvCfg(DirectRLEnvCfg):
     # simulation
     sim: SimulationCfg = SimulationCfg(dt=1 / 120)
 
@@ -456,10 +456,10 @@ class SlidingPandaGymPropNoiseEnvCfg(DirectRLEnvCfg):
     rew_scale_goal_pushing = 30.0
     rew_scale_goal_exp = 30.0
 
-class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
-    cfg: SlidingPandaGymPropNoiseEnvCfg
+class SlidingPandaGymAllPropEnv(DirectRLEnvFeedback):
+    cfg: SlidingPandaGymAllPropEnvCfg
 
-    def __init__(self, cfg: SlidingPandaGymPropNoiseEnvCfg, render_mode: str | None = None, **kwargs):
+    def __init__(self, cfg: SlidingPandaGymAllPropEnvCfg, render_mode: str | None = None, **kwargs):
         # print("Env init called!!!!")
 
         # Load run env config
@@ -743,9 +743,8 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             "fric": 0.0, 
             "com": 0.0
         }
-        
         self.fric_noise_epi = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
-        self.com_noise_epi = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(self.scene.env_origins.shape[0],3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.com_noise_epi = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         # Property estimation
         self.rnn_rmse = None
@@ -755,14 +754,9 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
 
         self.transition_to_task_idx = None
 
-    def _set_property_noise(self, prop_noise_mean_dict, prop_noise_std_dict: dict): 
+    def _set_property_noise(self, prop_noise_std_dict: dict): 
         print("Set property noise")
         # print(prop_noise_std_dict)
-
-        for key, value in prop_noise_mean_dict.items():
-            self.sensitivity_test_noise_mean[key] = value
-            print(self.sensitivity_test_noise_mean)
-
         for key, value in prop_noise_std_dict.items():
             self.sensitivity_test_noise_std[key] = value
             print(self.sensitivity_test_noise_std)
@@ -1028,16 +1022,17 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
 
         dynamic_frictions_min = 0.05
         dynamic_frictions_max = 0.3
+        # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
         dynamic_frictions = dynamic_frictions.view(-1,1)
         dynamic_frictions = dynamic_frictions + self.fric_noise_epi
-        # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
         normalized_dynamic_frictions = normalize(dynamic_frictions, dynamic_frictions_min, dynamic_frictions_max, self.state_norm_min, self.state_norm_max)
         normalized_dynamic_frictions = normalized_dynamic_frictions.view(-1,1)
+        # print(normalized_dynamic_frictions.shape)
+        # print(self.fric_noise_epi.shape)
+        # print(normalized_dynamic_frictions.shape)
 
         # CoM
         curr_coms = self.scene.rigid_objects["cylinderpuck2"].root_physx_view.get_coms()
-        curr_coms = curr_coms[:,0:3].clone().to(self.scene.env_origins.device)
-        curr_coms = curr_coms + self.com_noise_epi
         com_x = curr_coms[:,0].to(self.scene.env_origins.device)
         com_y = curr_coms[:,1].to(self.scene.env_origins.device)
         com_z = curr_coms[:,2].to(self.scene.env_origins.device)
@@ -1100,7 +1095,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         self.obs_pos_noise_step = torch.normal(self.cfg.obs_pos_noise_mean, self.cfg.obs_pos_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.obs_vel_noise_step = torch.normal(self.cfg.obs_vel_noise_mean, self.cfg.obs_vel_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.obs_rot_noise_step = torch.normal(self.cfg.obs_rot_noise_mean, self.cfg.obs_rot_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
-        self.obs_fric_noise_step = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        # self.obs_fric_noise_step = torch.normal(self.cfg.obs_fric_noise_mean, self.cfg.obs_fric_noise_std, size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         normalized_past_puck_pos_obs_x = normalized_past_puck_pos_obs[:,:,0].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
         normalized_past_puck_pos_obs_y = normalized_past_puck_pos_obs[:,:,1].T # + self.obs_pos_noise_step + self.obs_pos_noise_epi
@@ -1628,7 +1623,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
 
         # Episode noise for properties
         self.fric_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
-        self.com_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(len(env_ids),3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.com_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         self.fric_noise_epi[env_ids, :] = self.fric_noise_epi_new
         self.com_noise_epi[env_ids, :] = self.com_noise_epi_new

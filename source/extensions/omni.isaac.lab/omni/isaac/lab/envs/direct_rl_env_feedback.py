@@ -165,6 +165,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.end_timestep_record = torch.zeros_like(self.reset_terminated)
         self.num_success = 0
         self.num_failure = 0
+        self.all_env_total_num = 0
+        self.all_env_success_num = 0
+        self.all_env_failed_num = 0
         self.reset_buf = torch.zeros(self.num_envs, dtype=torch.bool, device=self.sim.device)
         self.actions = torch.zeros(self.num_envs, self.cfg.num_actions, device=self.sim.device)
         # setup the action and observation spaces for Gym
@@ -276,6 +279,11 @@ class DirectRLEnvFeedback(DirectRLEnv):
         # print(prop_info)
         self.prop_info = prop_info
 
+    def _reset_trial_count(self) -> None: 
+        self.all_env_total_num = 0
+        self.all_env_success_num = 0
+        self.all_env_failed_num = 0
+
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics.
 
@@ -327,6 +335,10 @@ class DirectRLEnvFeedback(DirectRLEnv):
         # Update record_tensor based on success_tensor and failed_tensor
         self.success_record = torch.where(success_tensor, torch.tensor(True, dtype=torch.bool), self.success_record)
         self.success_record = torch.where(failed_tensor, torch.tensor(False, dtype=torch.bool), self.success_record)
+        total_trials = success_tensor.sum()+failed_tensor.sum()
+        self.all_env_total_num += total_trials
+        self.all_env_success_num += success_tensor.sum()
+        self.all_env_failed_num += failed_tensor.sum()
 
         end_rmse_record_mean = 0.0
         end_rmse_record_mean_fric = 0.0
@@ -431,7 +443,10 @@ class DirectRLEnvFeedback(DirectRLEnv):
             self.num_failure+=1
         self.extras["log_eval"] = {"num_success": self.num_success, 
                                    "num_failure": self.num_failure, 
-                                   "end_timestep": end_timestep_record_mean}
+                                   "end_timestep": end_timestep_record_mean, 
+                                   "all_env_total_num": self.all_env_total_num, 
+                                   "all_env_success_num": self.all_env_success_num, 
+                                   "all_env_failed_num": self.all_env_failed_num}
 
         # print(self.success_record.int())
 
