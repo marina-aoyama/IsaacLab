@@ -284,6 +284,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.all_env_success_num = 0
         self.all_env_failed_num = 0
 
+        all_idx = torch.arange(0, self.scene.env_origins.shape[0], device=self.device)
+        self._reset_idx(all_idx)
+
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics.
 
@@ -363,6 +366,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
                 end_rmse_record_mean_fric = self.end_rmse_record_fric.mean()
                 self.end_rmse_record_com = torch.where(end_tensor, curr_rmse[:,1], self.end_rmse_record_com)
                 end_rmse_record_mean_com = self.end_rmse_record_com.mean()
+            else: 
+                self.end_rmse_record = torch.where(end_tensor, curr_rmse, self.end_rmse_record)
+                end_rmse_record_mean = self.end_rmse_record.mean()
             
             self.extras["prop_estimation"] = {
                 "curr_rmse": done_info["curr_rmse"], 
@@ -370,6 +376,7 @@ class DirectRLEnvFeedback(DirectRLEnv):
 
         # Log episode length
         end_tensor = success_tensor | failed_tensor
+        end_tensor = success_tensor 
         self.end_timestep_record = torch.where(end_tensor, self.episode_length_buf, self.end_timestep_record)
         end_timestep_record_mean = self.end_timestep_record.float().mean()
         
@@ -462,6 +469,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
             self.extras["log"] = {"success_rate": success_rate, 
                                     "end_rmse_fric": end_rmse_record_mean_fric, 
                                     "end_rmse_com": end_rmse_record_mean_com}
+        else: 
+            self.extras["log"] = {"success_rate": success_rate, 
+                              "end_rmse": end_rmse_record_mean}
         
         if "exp_traj" in self.obs_buf: 
             self.extras["two_phase"] = {"episode_length_buf": self.episode_length_buf, 

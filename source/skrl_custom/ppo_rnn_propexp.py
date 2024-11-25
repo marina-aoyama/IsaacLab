@@ -448,6 +448,8 @@ class PPO_RNN_PROPEXP(Agent):
             rnn_rmse = torch.sqrt(self.prop_criterion(denormalsied_output, curr_rnn_prop_target))
             rnn_rmse_fric = torch.sqrt(self.prop_criterion(denormalsied_output_fric, curr_rnn_prop_target_fric))
             rnn_rmse_com = torch.sqrt(self.prop_criterion(denormalsied_output_com, curr_rnn_prop_target_com))
+        else: 
+            rnn_rmse = torch.sqrt(self.prop_criterion(denormalsied_output, curr_rnn_prop_target)) 
         # print(output)
         # print(loss)
 
@@ -473,6 +475,14 @@ class PPO_RNN_PROPEXP(Agent):
                 "rnn_rmse": rnn_rmse, 
                 "rnn_rmse_fric": rnn_rmse_fric, 
                 "rnn_rmse_com": rnn_rmse_com, 
+                "normalized_output": normalized_output, 
+                "denormalsied_output": denormalsied_output, 
+                "denormalsied_target": denormalsied_target
+            }
+        else: 
+            prop_estimator_output = {
+                "rnn_loss": rnn_loss, 
+                "rnn_rmse": rnn_rmse, 
                 "normalized_output": normalized_output, 
                 "denormalsied_output": denormalsied_output, 
                 "denormalsied_target": denormalsied_target
@@ -915,6 +925,9 @@ class PPO_RNN_PROPEXP(Agent):
         if self._learning_rate_scheduler:
             self.track_data("Learning / Learning rate", self.scheduler.get_last_lr()[0])
 
+    def _clear_estimator_buf(self) -> None: 
+        self.curr_rollout_rnn_input = []
+        self.curr_rollout_rnn_target = []
     
     def _update_prop_estimator(self, timestep: int, timesteps: int) -> None:
         # print("Prop estimator update")

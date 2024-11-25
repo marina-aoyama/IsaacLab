@@ -119,6 +119,41 @@ class EventCfg_FricCoM:
       },
   )
 
+@configclass
+class EventCfg_All:
+  robot_physics_material = EventTerm(
+      func=mdp.randomize_rigid_body_material,
+      mode="reset",
+      params={
+          "asset_cfg": SceneEntityCfg("cylinderpuck2"),
+          "static_friction_range": (0.05, 0.3),
+          "dynamic_friction_range": (0.05, 0.3),
+          "restitution_range": (0.0, 1.0),  # (1.0, 1.0),  
+          "com_rad": 0.032, 
+          "mass_range": (0.1, 0.5), 
+          "num_buckets": 250, 
+      },
+  )
+
+@configclass
+class EventCfg_Custom:
+  robot_physics_material = EventTerm(
+      func=mdp.randomize_rigid_body_material,
+      mode="reset",
+      params={
+          "asset_cfg": SceneEntityCfg("cylinderpuck2"),
+          "static_friction_range": (0.05, 0.3),
+          "dynamic_friction_range": (0.05, 0.3),
+          "restitution_range": (1.0, 1.0),  # (1.0, 1.0),  
+          "com_rad": 0.032, 
+        #   "com_range_x": (-0.01, 0.01), # (-0.02, 0.02),
+        #   "com_range_y": (-0.01, 0.01), # (-0.02, 0.02),
+        #   "com_range_z": (0.0, 0.0), 
+          "mass_range": (0.15, 0.15), 
+          "num_buckets": 250, 
+      },
+  )
+
 
 #   @configclass
 #   class EventCfg:
@@ -488,6 +523,12 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         elif self.prop_mode=="fric_com": 
             cfg.num_observations = 13
             print("Friction + CoM Groundtruth")
+        elif self.prop_mode=="all": 
+            cfg.num_observations = 16
+            print("All Groundtruth")
+        elif self.prop_mode=="custom": 
+            cfg.num_observations = 14
+            print("Custom Groundtruth")
 
         if self.prop_mode=="fric": 
             cfg.events = EventCfg_Fric()
@@ -495,6 +536,10 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             cfg.events = EventCfg_CoM()
         elif self.prop_mode=="fric_com": 
             cfg.events = EventCfg_FricCoM()
+        elif self.prop_mode=="all": 
+            cfg.events = EventCfg_All()
+        elif self.prop_mode=="custom": 
+            cfg.events = EventCfg_Custom()
 
         super().__init__(cfg, render_mode, **kwargs)
 
@@ -573,7 +618,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             self.prop_estimate_threshold.append(0.05) 
             # self.prop_estimate_threshold.append(0.01) 
             self.prop_estimate_threshold.append(0.005) 
-        else:  
+        else: 
             # self.prop_estimate_threshold[0] = 0.05
             self.prop_estimate_threshold.append(0.05) 
         self.rew_scale_goal_pushing = self.cfg.rew_scale_goal_pushing
@@ -735,17 +780,26 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         # Episodic noise for properties
         # Sensitivity analysis
         self.sensitivity_test_noise_mean = {
+            "staticfric": 0.0, 
             "fric": 0.0, 
-            "com": 0.0
+            "restitution": 0.0, 
+            "com": 0.0, 
+            "mass": 0.0
         }
 
         self.sensitivity_test_noise_std = {
+            "staticfric": 0.0, 
             "fric": 0.0, 
-            "com": 0.0
+            "restitution": 0.0, 
+            "com": 0.0, 
+            "mass": 0.0
         }
         
         self.fric_noise_epi = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.com_noise_epi = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(self.scene.env_origins.shape[0],3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.staticfric_noise_epi = torch.normal(self.sensitivity_test_noise_mean["staticfric"], self.sensitivity_test_noise_std["staticfric"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.restitution_noise_epi = torch.normal(self.sensitivity_test_noise_mean["restitution"], self.sensitivity_test_noise_std["restitution"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.mass_noise_epi = torch.normal(self.sensitivity_test_noise_mean["mass"], self.sensitivity_test_noise_std["mass"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         # Property estimation
         self.rnn_rmse = None
@@ -1026,26 +1080,64 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         dynamic_frictions = curr_materials.squeeze().reshape((-1,3))[:,1].to(self.scene.env_origins.device)
         restitutions = curr_materials.squeeze().reshape((-1,3))[:,2].to(self.scene.env_origins.device)
 
+        static_frictions_min = 0.05
+        static_frictions_max = 0.3
+        static_frictions = static_frictions.view(-1,1)
+        # static_frictions = static_frictions + self.staticfric_noise_epi
+        # normalized_static_frictions = (static_frictions - static_frictions_min) / (static_frictions_max - static_frictions_min)
+        normalized_static_frictions = normalize(static_frictions, static_frictions_min, static_frictions_max, self.state_norm_min, self.state_norm_max)
+        normalized_static_frictions = normalized_static_frictions.view(-1,1)
+        normalized_static_frictions = normalized_static_frictions + self.staticfric_noise_epi
+
         dynamic_frictions_min = 0.05
         dynamic_frictions_max = 0.3
         dynamic_frictions = dynamic_frictions.view(-1,1)
-        dynamic_frictions = dynamic_frictions + self.fric_noise_epi
+        # dynamic_frictions = dynamic_frictions + self.fric_noise_epi
         # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
         normalized_dynamic_frictions = normalize(dynamic_frictions, dynamic_frictions_min, dynamic_frictions_max, self.state_norm_min, self.state_norm_max)
         normalized_dynamic_frictions = normalized_dynamic_frictions.view(-1,1)
+        normalized_dynamic_frictions = normalized_dynamic_frictions + self.fric_noise_epi
+
+        restitutions_min = 0.0
+        restitutions_max = 1.0
+        restitutions = restitutions.view(-1,1)
+        # restitutions = restitutions + self.restitution_noise_epi
+        # normalized_restitutions = (restitutions - restitutions_min) / (restitutions_max - restitutions_min)
+        normalized_restitutions = normalize(restitutions, restitutions_min, restitutions_max, self.state_norm_min, self.state_norm_max)
+        normalized_restitutions = normalized_restitutions.view(-1,1)
+        normalized_restitutions = normalized_restitutions + self.restitution_noise_epi
 
         # CoM
         curr_coms = self.scene.rigid_objects["cylinderpuck2"].root_physx_view.get_coms()
         curr_coms = curr_coms[:,0:3].clone().to(self.scene.env_origins.device)
-        curr_coms = curr_coms + self.com_noise_epi
+        # curr_coms = curr_coms + self.com_noise_epi
         com_x = curr_coms[:,0].to(self.scene.env_origins.device)
         com_y = curr_coms[:,1].to(self.scene.env_origins.device)
         com_z = curr_coms[:,2].to(self.scene.env_origins.device)
         com_min = -0.02
         com_max = 0.02
-        normalized_com_x = (com_x - com_min) / (com_max - com_min)
-        normalized_com_y = (com_y - com_min) / (com_max - com_min)
-        normalized_com_z = (com_z - com_min) / (com_max - com_min)
+        normalized_com_x = normalize(com_x, com_min, com_max, self.state_norm_min, self.state_norm_max)
+        normalized_com_y = normalize(com_y, com_min, com_max, self.state_norm_min, self.state_norm_max)
+        normalized_com_z = normalize(com_z, com_min, com_max, self.state_norm_min, self.state_norm_max)
+        normalized_com_x = normalized_com_x + self.com_noise_epi[:,0]
+        normalized_com_y = normalized_com_y + self.com_noise_epi[:,1]
+        normalized_com_z = normalized_com_z + self.com_noise_epi[:,2]
+
+        # normalized_com_x = (com_x - com_min) / (com_max - com_min)
+        # normalized_com_y = (com_y - com_min) / (com_max - com_min)
+        # normalized_com_z = (com_z - com_min) / (com_max - com_min)
+
+        # Mass
+        curr_mass = self.scene.rigid_objects["cylinderpuck2"].root_physx_view.get_masses()
+        curr_mass = curr_mass.clone().to(self.scene.env_origins.device)
+        # curr_mass = curr_mass + self.mass_noise_epi
+        # print(curr_mass.shape)
+        mass_min = 0.0
+        mass_max = 0.6
+        normalized_mass = normalize(curr_mass, mass_min, mass_max, self.state_norm_min, self.state_norm_max)
+        normalized_mass = normalized_mass + self.mass_noise_epi
+        # normalized_mass = (curr_mass - mass_min) / (mass_max - mass_min)
+        # denormalized_mass = denormalize(normalized_mass, mass_min, mass_max, self.state_norm_min, self.state_norm_max)
 
         # Estimated prop
         if self.denormalsied_output == None: 
@@ -1197,6 +1289,10 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1)), dim=1)   
         elif self.prop_mode=="fric_com": 
             obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1)), dim=1)   
+        elif self.prop_mode=="all": 
+            obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1), normalized_static_frictions, normalized_restitutions, normalized_mass), dim=1)   
+        elif self.prop_mode=="custom": 
+            obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_dynamic_frictions, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1), normalized_static_frictions), dim=1)   
         exponly_obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_pushing_goal_tensor_x, normalized_pushing_goal_tensor_y), dim=1)   
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, curr_cylinderpuck2_state[:, 6].view(-1,1), normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y, normalized_com_x.view(-1, 1), normalized_com_y.view(-1, 1)), dim=1)   
         # obs = torch.cat((normalized_past_puck_pos_obs_x, normalized_past_puck_pos_obs_y, normalized_past_puck_rot_obs_yaw, normalized_past_puck_vel_obs_x, normalized_past_puck_vel_obs_y, normalized_past_pusher_pos_obs_x, normalized_past_pusher_pos_obs_y, normalized_past_pusher_vel_obs_x, normalized_past_pusher_vel_obs_y, normalized_goal_tensor_x, normalized_goal_tensor_y), dim=1)   
@@ -1474,6 +1570,8 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             curr_out_of_bounds_goal_prop_estimate_count_fric = self.prop_rmse_eachenv[:,0] < self.prop_estimate_threshold[0]
             curr_out_of_bounds_goal_prop_estimate_count_com = self.prop_rmse_eachenv[:,1] < self.prop_estimate_threshold[1]
             curr_out_of_bounds_goal_prop_estimate_count = curr_out_of_bounds_goal_prop_estimate_count_fric | curr_out_of_bounds_goal_prop_estimate_count_com
+        else: 
+            curr_out_of_bounds_goal_prop_estimate_count = self.prop_rmse_eachenv < self.prop_estimate_threshold[0]
 
         self.out_of_bounds_goal_prop_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count.int()
 
@@ -1594,6 +1692,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
 
 
     def _reset_idx(self, env_ids: Sequence[int] | None):
+        # print(type(env_ids))
         # print("Env reset idx called!!!!")
 
         # print("Reset env ids")
@@ -1629,10 +1728,16 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         # Episode noise for properties
         self.fric_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.com_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(len(env_ids),3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.staticfric_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["staticfric"], self.sensitivity_test_noise_std["staticfric"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.restitution_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["restitution"], self.sensitivity_test_noise_std["restitution"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.mass_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["mass"], self.sensitivity_test_noise_std["mass"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         self.fric_noise_epi[env_ids, :] = self.fric_noise_epi_new
         self.com_noise_epi[env_ids, :] = self.com_noise_epi_new
-
+        self.staticfric_noise_epi[env_ids, :] = self.staticfric_noise_epi_new
+        self.restitution_noise_epi[env_ids, :] = self.restitution_noise_epi_new
+        self.mass_noise_epi[env_ids, :] = self.mass_noise_epi_new
+        
         # Past obs (prop) 
         # print("Past obs shapeee")
         # print(len(self.past_obs_prop))

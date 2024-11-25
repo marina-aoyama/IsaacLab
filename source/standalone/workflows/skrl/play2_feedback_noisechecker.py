@@ -54,6 +54,8 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import os
 import torch
+import numpy as np
+import pickle
 
 from skrl.agents.torch.ppo import PPO, PPO_DEFAULT_CONFIG, PPO_RNN
 from skrl.utils.model_instantiators.torch import deterministic_model, gaussian_model, shared_model
@@ -203,8 +205,8 @@ def main():
     obs, infos = env.reset()
     prev_total_episode_num = 0
     gt_success_rate = None
-    curr_prop = "fric"
-    prop_noise_mean_dict = {curr_prop: 1.0}
+    curr_prop = "restitution"
+    prop_noise_mean_dict = {curr_prop: -2.1}   # -0.11
     prop_noise_std_dict = {curr_prop: 0.0}
     env._set_property_noise(prop_noise_mean_dict, prop_noise_std_dict)
     sensitivity_terminate = False
@@ -275,23 +277,38 @@ def main():
             import time
             if infos["log_eval"]["all_env_total_num"] >= 10000: 
                 curr_success_rate = (infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100
-                noise_success_record.append((prop_noise_mean_dict[curr_prop], curr_success_rate))
+                noise_success_record.append((prop_noise_mean_dict[curr_prop], curr_success_rate.cpu().numpy()))
                 print("Current noise level")
                 print(prop_noise_mean_dict[curr_prop])
                 print("Current success rate")
                 print(curr_success_rate)
-                prop_noise_mean_dict = {curr_prop: prop_noise_mean_dict[curr_prop]+0.001}
+                print("Current summary")
+                print(noise_success_record)
+                prop_noise_mean_dict = {curr_prop: prop_noise_mean_dict[curr_prop]+0.1}    # 0.01
                 prop_noise_std_dict = {}
                 env._set_property_noise(prop_noise_mean_dict, prop_noise_std_dict)
                 env._reset_trial_count()
 
-                if prop_noise_mean_dict[curr_prop] == 0.3: 
+                if prop_noise_mean_dict[curr_prop] >= 2.1: # 0.11
                     sensitivity_terminate = True
                     print("Finish noise checking")
                     time.sleep(3)
+                    noise_success_record_np = np.array(noise_success_record)
+                    print(noise_success_record_np.shape)
+                    print(log_root_path)
+                    noise_record_path = os.path.join(log_root_path, log_dir, "noise_success_record", "noise_success.pkl")
+                    # Get the directory part of the path
+                    directory = os.path.dirname(noise_record_path)
+
+                    # Create the directory if it doesn't exist
+                    os.makedirs(directory, exist_ok=True)
+
+                    with open(noise_record_path, 'wb') as file:  # 'wb' stands for write binary
+                        pickle.dump(noise_success_record_np, file)
                 else: 
                     print("Update noise level")
                     time.sleep(3)
+                agent._clear_estimator_buf()
                 
             # print("sensitivity check!!")
             # print("all trial summary")
