@@ -513,6 +513,7 @@ def main():
             # get prop estimate
             prop_info = {}
             prop_info["prop_estimator_output"] = prop_estimator_output_exp
+            # print(prop_estimator_output_exp.shape)
             # print("Prop info")
             # print(prop_info)
             # print(prop_estimator_output_exp)

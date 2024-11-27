@@ -126,8 +126,8 @@ class EventCfg_All:
       mode="reset",
       params={
           "asset_cfg": SceneEntityCfg("cylinderpuck2"),
-          "static_friction_range": (0.05, 1.0),
-          "dynamic_friction_range": (0.05, 1.0),
+          "static_friction_range": (0.05, 0.3),
+          "dynamic_friction_range": (0.05, 0.5),
           "restitution_range": (0.0, 1.0),  # (1.0, 1.0),  
           "com_rad": 0.032, 
           "mass_range": (0.1, 0.5), 
@@ -1085,7 +1085,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         restitutions = curr_materials.squeeze().reshape((-1,3))[:,2].to(self.scene.env_origins.device)
 
         static_frictions_min = 0.05
-        static_frictions_max = 1.0  # 0.3
+        static_frictions_max = 0.3
         static_frictions = static_frictions.view(-1,1)
         # static_frictions = static_frictions + self.staticfric_noise_epi
         # normalized_static_frictions = (static_frictions - static_frictions_min) / (static_frictions_max - static_frictions_min)
@@ -1094,7 +1094,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         normalized_static_frictions = normalized_static_frictions + self.staticfric_noise_epi
 
         dynamic_frictions_min = 0.05
-        dynamic_frictions_max = 1.0 # 0.3
+        dynamic_frictions_max = 0.5
         dynamic_frictions = dynamic_frictions.view(-1,1)
         # dynamic_frictions = dynamic_frictions + self.fric_noise_epi
         # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
@@ -1118,8 +1118,8 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         com_x = curr_coms[:,0].to(self.scene.env_origins.device)
         com_y = curr_coms[:,1].to(self.scene.env_origins.device)
         com_z = curr_coms[:,2].to(self.scene.env_origins.device)
-        com_min = -0.0224
-        com_max = 0.0224
+        com_min = -0.0224   # -0.02
+        com_max = 0.0224   # 0.02
         normalized_com_x = normalize(com_x, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_y = normalize(com_y, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_z = normalize(com_z, com_min, com_max, self.state_norm_min, self.state_norm_max)
