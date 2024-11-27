@@ -52,6 +52,7 @@ agent:
   value_loss_scale: 2.0
   kl_threshold: 0
   rewards_shaper_scale: 0.01
+  # time_limit_bootstrap: True 
   # logging and checkpoint
   experiment:
     directory: "sliding_direct"
@@ -66,11 +67,11 @@ agent:
 # Friction only
 prop_estimator: 
   input_size: 7 # 11  # State and action concatenated size
-  hidden_size: 64    # Number of features in hidden state
+  hidden_size: 128    # Number of features in hidden state
   num_layers: 1      # Number of LSTM layers
   output_size: 1     # Number of physical properties (e.g., friction, CoM)
   learning_rate: 0.001
-  num_epochs: 5
+  num_epochs: 10
   policy_switch: False
   # # First iteration
   # pre_trained: False
@@ -173,5 +174,5 @@ prop_estimator:
 # Sequential trainer
 # https://skrl.readthedocs.io/en/latest/api/trainers/sequential.html
 trainer:
-  timesteps: 12000 # 6000 # 24000 # 24000
+  timesteps: 24000 # 12000 # 6000 # 24000 # 24000
   environment_info: "log"

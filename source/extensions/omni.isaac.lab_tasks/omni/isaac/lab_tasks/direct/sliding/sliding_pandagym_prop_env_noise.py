@@ -126,8 +126,8 @@ class EventCfg_All:
       mode="reset",
       params={
           "asset_cfg": SceneEntityCfg("cylinderpuck2"),
-          "static_friction_range": (0.05, 0.3),
-          "dynamic_friction_range": (0.05, 0.3),
+          "static_friction_range": (0.05, 1.0),
+          "dynamic_friction_range": (0.05, 1.0),
           "restitution_range": (0.0, 1.0),  # (1.0, 1.0),  
           "com_rad": 0.032, 
           "mass_range": (0.1, 0.5), 
@@ -571,6 +571,10 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         self.out_of_bounds_goal_puck_posx_count = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
         self.out_of_bounds_goal_pushing_puck_pos_count = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
         self.out_of_bounds_goal_prop_estimate_count = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
+        self.out_of_bounds_goal_fric_estimate_count = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
+        self.out_of_bounds_goal_com_estimate_count = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
+        self.friction_bounds = torch.zeros((self.scene.env_origins.shape[0]), dtype=torch.bool, device=self.scene.env_origins.device)
+        self.com_bounds = torch.zeros((self.scene.env_origins.shape[0]), dtype=torch.bool, device=self.scene.env_origins.device)
 
         # Recent episode success/failure tracking (1: success, 0: failure)
         self.goal_bounds = torch.zeros((self.scene.env_origins.shape[0]), dtype=torch.bool)
@@ -607,7 +611,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             if self.train_model=="train": 
                 if self.pre_trained_models_cfg["training_itr"] == 0: 
                     # self.prop_estimate_threshold[0] = 0.01 # 0.005
-                    self.prop_estimate_threshold.append(0.01) 
+                    self.prop_estimate_threshold.append(0.005) 
                 else: 
                     # self.prop_estimate_threshold[0] = 0.005 # 0.005
                     self.prop_estimate_threshold.append(0.005) 
@@ -617,7 +621,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         elif self.prop_mode=="fric_com": 
             self.prop_estimate_threshold.append(0.05) 
             # self.prop_estimate_threshold.append(0.01) 
-            self.prop_estimate_threshold.append(0.005) 
+            self.prop_estimate_threshold.append(0.01) 
         else: 
             # self.prop_estimate_threshold[0] = 0.05
             self.prop_estimate_threshold.append(0.05) 
@@ -1081,7 +1085,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         restitutions = curr_materials.squeeze().reshape((-1,3))[:,2].to(self.scene.env_origins.device)
 
         static_frictions_min = 0.05
-        static_frictions_max = 0.3
+        static_frictions_max = 1.0  # 0.3
         static_frictions = static_frictions.view(-1,1)
         # static_frictions = static_frictions + self.staticfric_noise_epi
         # normalized_static_frictions = (static_frictions - static_frictions_min) / (static_frictions_max - static_frictions_min)
@@ -1090,7 +1094,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         normalized_static_frictions = normalized_static_frictions + self.staticfric_noise_epi
 
         dynamic_frictions_min = 0.05
-        dynamic_frictions_max = 0.3
+        dynamic_frictions_max = 1.0 # 0.3
         dynamic_frictions = dynamic_frictions.view(-1,1)
         # dynamic_frictions = dynamic_frictions + self.fric_noise_epi
         # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
@@ -1114,8 +1118,8 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         com_x = curr_coms[:,0].to(self.scene.env_origins.device)
         com_y = curr_coms[:,1].to(self.scene.env_origins.device)
         com_z = curr_coms[:,2].to(self.scene.env_origins.device)
-        com_min = -0.02
-        com_max = 0.02
+        com_min = -0.0224
+        com_max = 0.0224
         normalized_com_x = normalize(com_x, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_y = normalize(com_y, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_z = normalize(com_z, com_min, com_max, self.state_norm_min, self.state_norm_max)
@@ -1132,8 +1136,8 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         curr_mass = curr_mass.clone().to(self.scene.env_origins.device)
         # curr_mass = curr_mass + self.mass_noise_epi
         # print(curr_mass.shape)
-        mass_min = 0.0
-        mass_max = 0.6
+        mass_min = 0.1
+        mass_max = 0.5
         normalized_mass = normalize(curr_mass, mass_min, mass_max, self.state_norm_min, self.state_norm_max)
         normalized_mass = normalized_mass + self.mass_noise_epi
         # normalized_mass = (curr_mass - mass_min) / (mass_max - mass_min)
@@ -1566,18 +1570,43 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         # Goal for exploration
         if self.prop_mode=="fric" or self.prop_mode=="com": 
             curr_out_of_bounds_goal_prop_estimate_count = self.prop_rmse_eachenv < self.prop_estimate_threshold[0]
+
+            self.out_of_bounds_goal_prop_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count.int()
+
+            self.goal_bounds_exp = self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount
+            self.out_of_bounds_goal_prop_estimate_count[self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount] = 0
+            self.out_of_bounds_goal_prop_estimate_count[~curr_out_of_bounds_goal_prop_estimate_count] = 0
+
         elif self.prop_mode=="fric_com": 
             curr_out_of_bounds_goal_prop_estimate_count_fric = self.prop_rmse_eachenv[:,0] < self.prop_estimate_threshold[0]
             curr_out_of_bounds_goal_prop_estimate_count_com = self.prop_rmse_eachenv[:,1] < self.prop_estimate_threshold[1]
             curr_out_of_bounds_goal_prop_estimate_count = curr_out_of_bounds_goal_prop_estimate_count_fric | curr_out_of_bounds_goal_prop_estimate_count_com
+
+            self.out_of_bounds_goal_fric_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count_fric.int()
+            self.out_of_bounds_goal_com_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count_com.int()
+            curr_goal_bounds_exp_fric = self.out_of_bounds_goal_fric_estimate_count>self.cfg.max_estimation_goalcount
+            curr_goal_bounds_exp_com = self.out_of_bounds_goal_com_estimate_count>self.cfg.max_estimation_goalcount
+            self.friction_bounds = self.friction_bounds | curr_goal_bounds_exp_fric
+            self.com_bounds = self.com_bounds | curr_goal_bounds_exp_com
+            self.goal_bounds_exp = self.friction_bounds & self.com_bounds
+            self.out_of_bounds_goal_fric_estimate_count[self.out_of_bounds_goal_fric_estimate_count>self.cfg.max_estimation_goalcount] = 0
+            self.out_of_bounds_goal_fric_estimate_count[~curr_out_of_bounds_goal_prop_estimate_count_fric] = 0
+            self.out_of_bounds_goal_com_estimate_count[self.out_of_bounds_goal_com_estimate_count>self.cfg.max_estimation_goalcount] = 0
+            self.out_of_bounds_goal_com_estimate_count[~curr_out_of_bounds_goal_prop_estimate_count_com] = 0
+            self.friction_bounds[self.goal_bounds_exp] = False
+            self.com_bounds[self.goal_bounds_exp] = False
         else: 
             curr_out_of_bounds_goal_prop_estimate_count = self.prop_rmse_eachenv < self.prop_estimate_threshold[0]
+            
+            self.out_of_bounds_goal_prop_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count.int()
 
-        self.out_of_bounds_goal_prop_estimate_count+= curr_out_of_bounds_goal_prop_estimate_count.int()
+            self.goal_bounds_exp = self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount
+            self.out_of_bounds_goal_prop_estimate_count[self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount] = 0
+            self.out_of_bounds_goal_prop_estimate_count[~curr_out_of_bounds_goal_prop_estimate_count] = 0
 
-        self.goal_bounds_exp = self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount
-        self.out_of_bounds_goal_prop_estimate_count[self.out_of_bounds_goal_prop_estimate_count>self.cfg.max_estimation_goalcount] = 0
-        self.out_of_bounds_goal_prop_estimate_count[~curr_out_of_bounds_goal_prop_estimate_count] = 0
+
+        
+        
 
         # print("Goal bounds")
         # print(self.goal_bounds_exp)

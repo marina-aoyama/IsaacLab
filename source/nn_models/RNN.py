@@ -14,7 +14,7 @@ class RNN(nn.Module):
         self.num_layers = num_layers
         
         # Define the RNN layer
-        self.rnn = nn.RNN(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
+        self.rnn = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
         
         # Define a fully connected layer to output the estimated properties
         self.fc = nn.Linear(hidden_size, output_size)
@@ -26,9 +26,10 @@ class RNN(nn.Module):
     def forward(self, x):
         # Initialize hidden state
         h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
-        
+        c0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(x.device)
+
         # Forward propagate the RNN
-        out, _ = self.rnn(x, h0)  # out: tensor of shape (batch_size, seq_length, hidden_size)
+        out, _ = self.rnn(x, (h0, c0))  # out: tensor of shape (batch_size, seq_length, hidden_size)
         
         # Use the last time step's output for property estimation
         out = out[:, -1, :]  # (batch_size, hidden_size)
