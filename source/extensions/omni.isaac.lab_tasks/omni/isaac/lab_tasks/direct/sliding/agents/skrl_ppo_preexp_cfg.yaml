@@ -103,7 +103,7 @@ agent:
 
 prop_estimator: 
   input_size: 7 # 11  # State and action concatenated size
-  hidden_size: 64    # Number of features in hidden state
+  hidden_size: 128    # Number of features in hidden state
   num_layers: 1      # Number of LSTM layers
   output_size: 1     # Number of physical properties (e.g., friction, CoM)
   learning_rate: 0.001
