@@ -126,7 +126,7 @@ class EventCfg_All:
       mode="reset",
       params={
           "asset_cfg": SceneEntityCfg("cylinderpuck2"),
-          "static_friction_range": (0.05, 0.3),
+          "static_friction_range": (0.05, 0.5),
           "dynamic_friction_range": (0.05, 0.5),
           "restitution_range": (0.0, 1.0),  # (1.0, 1.0),  
           "com_rad": 0.032, 
@@ -1085,7 +1085,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         restitutions = curr_materials.squeeze().reshape((-1,3))[:,2].to(self.scene.env_origins.device)
 
         static_frictions_min = 0.05
-        static_frictions_max = 0.3
+        static_frictions_max = 0.5
         static_frictions = static_frictions.view(-1,1)
         # static_frictions = static_frictions + self.staticfric_noise_epi
         # normalized_static_frictions = (static_frictions - static_frictions_min) / (static_frictions_max - static_frictions_min)

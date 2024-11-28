@@ -1,8 +1,8 @@
 
 env_mode: 
   train_model: "train" # "train" # "test" # test_singlepolicy
-  test_mode: "taskonly" # "exptask" # "exptask" # "taskonly"
-  prop_mode: "all"  # "fric" # fric_com  # "com"  # all
+  test_mode: "exponly" # "exptask" # "exptask" # "taskonly"
+  prop_mode: "fric_com"  # "fric" # fric_com  # "com"  # all
   test_case: "gt" # "gt"
 
 # train_model: "train" # "train" # "test"
