@@ -532,14 +532,22 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
 
         if self.prop_mode=="fric": 
             cfg.events = EventCfg_Fric()
+            num_prop = 1
         elif self.prop_mode=="com": 
             cfg.events = EventCfg_CoM()
+            num_prop = 2
         elif self.prop_mode=="fric_com": 
             cfg.events = EventCfg_FricCoM()
+            num_prop = 3
         elif self.prop_mode=="all": 
             cfg.events = EventCfg_All()
+            num_prop = 5
         elif self.prop_mode=="custom": 
             cfg.events = EventCfg_Custom()
+            num_prop = 1
+
+        if self.test_case=="dr_prop": 
+            cfg.num_actions = 3
 
         super().__init__(cfg, render_mode, **kwargs)
 
@@ -601,6 +609,9 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         self.maxgoal_locations = self.goal_locations[:,0]+(self.goal_length/2.0)-(self.cfg.puck_length/2.0)  # the cart is reset if it exceeds that position [m] (-0.7)
         self.mingoal_locations = (self.goal_locations[:,0]-(self.goal_length/2.0))+(self.cfg.puck_length/2.0)
         self.goal_threshold = 0.1
+
+        self.current_estimates = torch.zeros((self.scene.env_origins.shape[0]), device=self.scene.env_origins.device)
+        self.groundtruth_prop = torch.zeros((self.scene.env_origins.shape[0], num_prop), device=self.scene.env_origins.device)
 
         # property estimation goal
         self.prop_estimate_threshold = []
@@ -788,6 +799,9 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             "fric": 0.0, 
             "restitution": 0.0, 
             "com": 0.0, 
+            "comx": 0.0, 
+            "comy": 0.0, 
+            "comz": 0.0, 
             "mass": 0.0
         }
 
@@ -796,11 +810,17 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             "fric": 0.0, 
             "restitution": 0.0, 
             "com": 0.0, 
+            "comx": 0.0, 
+            "comy": 0.0, 
+            "comz": 0.0, 
             "mass": 0.0
         }
         
         self.fric_noise_epi = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.com_noise_epi = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(self.scene.env_origins.shape[0],3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comx_noise_epi = torch.normal(self.sensitivity_test_noise_mean["comx"], self.sensitivity_test_noise_std["comx"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comy_noise_epi = torch.normal(self.sensitivity_test_noise_mean["comy"], self.sensitivity_test_noise_std["comy"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comz_noise_epi = torch.normal(self.sensitivity_test_noise_mean["comz"], self.sensitivity_test_noise_std["comz"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.staticfric_noise_epi = torch.normal(self.sensitivity_test_noise_mean["staticfric"], self.sensitivity_test_noise_std["staticfric"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.restitution_noise_epi = torch.normal(self.sensitivity_test_noise_mean["restitution"], self.sensitivity_test_noise_std["restitution"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.mass_noise_epi = torch.normal(self.sensitivity_test_noise_mean["mass"], self.sensitivity_test_noise_std["mass"], size=(self.scene.env_origins.shape[0],1), generator=self.env_rng, device=self.scene.env_origins.device)
@@ -900,6 +920,10 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
     def _pre_physics_step(self, actions: torch.Tensor) -> None:
 
         # print("Env pre-physics called!!!!")
+
+        if self.test_case=="dr_prop": 
+            actions = actions.clone()[:,[0,1]]
+            self.current_estimates = actions[:,-1]
         self.actions = self.action_scale * actions.clone()
         # self.actions[:, 0] = self.actions[:, 0] * 2.0
         # self.actions[:, 1] = self.actions[:, 1] * 2.0
@@ -1094,7 +1118,7 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         normalized_static_frictions = normalized_static_frictions + self.staticfric_noise_epi
 
         dynamic_frictions_min = 0.05
-        dynamic_frictions_max = 0.3
+        dynamic_frictions_max = 0.5
         dynamic_frictions = dynamic_frictions.view(-1,1)
         # dynamic_frictions = dynamic_frictions + self.fric_noise_epi
         # normalized_dynamic_frictions = (dynamic_frictions - dynamic_frictions_min) / (dynamic_frictions_max - dynamic_frictions_min)
@@ -1123,9 +1147,12 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         normalized_com_x = normalize(com_x, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_y = normalize(com_y, com_min, com_max, self.state_norm_min, self.state_norm_max)
         normalized_com_z = normalize(com_z, com_min, com_max, self.state_norm_min, self.state_norm_max)
-        normalized_com_x = normalized_com_x + self.com_noise_epi[:,0]
-        normalized_com_y = normalized_com_y + self.com_noise_epi[:,1]
-        normalized_com_z = normalized_com_z + self.com_noise_epi[:,2]
+        # normalized_com_x = normalized_com_x + self.com_noise_epi[:,0]
+        # normalized_com_y = normalized_com_y + self.com_noise_epi[:,1]
+        # normalized_com_z = normalized_com_z + self.com_noise_epi[:,2]
+        normalized_com_x = normalized_com_x.view(-1,1) + self.comx_noise_epi
+        normalized_com_y = normalized_com_y.view(-1,1) + self.comy_noise_epi
+        normalized_com_z = normalized_com_z.view(-1,1) + self.comz_noise_epi
 
         # normalized_com_x = (com_x - com_min) / (com_max - com_min)
         # normalized_com_y = (com_y - com_min) / (com_max - com_min)
@@ -1421,6 +1448,17 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         jerk = (acc-self.prev_puck_acc)/control_dt
         self.prev_puck_acc = acc.clone()
 
+        # PPO prop estimates
+        # print("prop check")
+        # print(self.current_estimates.view(-1,1).shape)
+        # print(self.groundtruth_prop.shape)
+        # prop_mse = torch.mean((self.current_estimates-self.groundtruth_prop) ** 2)
+        prop_mse = (self.current_estimates - self.groundtruth_prop.T) ** 2# Shape: [8192, 8192]# Compute pairwise MSE
+        # prop_mse = prop_mse.mean(dim=1)          # Shape: [8192]
+        # print("propmse shape")
+        # print(prop_mse.shape)
+        # self.current_estimates
+
         total_reward = compute_rewards(
             self.cfg.rew_scale_terminated,
             self.cfg.rew_scale_distance, 
@@ -1438,7 +1476,9 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
             self.prop_rmse_eachenv, 
             self.goal_bounds_pushing, 
             self.goal_bounds_exp, 
-            self.test_mode
+            self.test_mode, 
+            self.test_case, 
+            prop_mse
         )
         return total_reward
         # pass
@@ -1757,12 +1797,18 @@ class SlidingPandaGymPropNoiseEnv(DirectRLEnvFeedback):
         # Episode noise for properties
         self.fric_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["fric"], self.sensitivity_test_noise_std["fric"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.com_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["com"], self.sensitivity_test_noise_std["com"], size=(len(env_ids),3), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comx_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["comx"], self.sensitivity_test_noise_std["comx"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comy_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["comy"], self.sensitivity_test_noise_std["comy"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
+        self.comz_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["comz"], self.sensitivity_test_noise_std["comz"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.staticfric_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["staticfric"], self.sensitivity_test_noise_std["staticfric"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.restitution_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["restitution"], self.sensitivity_test_noise_std["restitution"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
         self.mass_noise_epi_new = torch.normal(self.sensitivity_test_noise_mean["mass"], self.sensitivity_test_noise_std["mass"], size=(len(env_ids),1), generator=self.env_rng, device=self.scene.env_origins.device)
 
         self.fric_noise_epi[env_ids, :] = self.fric_noise_epi_new
         self.com_noise_epi[env_ids, :] = self.com_noise_epi_new
+        self.comx_noise_epi[env_ids, :] = self.comx_noise_epi_new
+        self.comy_noise_epi[env_ids, :] = self.comy_noise_epi_new
+        self.comz_noise_epi[env_ids, :] = self.comz_noise_epi_new
         self.staticfric_noise_epi[env_ids, :] = self.staticfric_noise_epi_new
         self.restitution_noise_epi[env_ids, :] = self.restitution_noise_epi_new
         self.mass_noise_epi[env_ids, :] = self.mass_noise_epi_new
@@ -1919,6 +1965,8 @@ def compute_rewards(
     goal_bounds_pushing: torch.Tensor, 
     goal_bounds_exp: torch.Tensor, 
     test_mode: str, 
+    test_case: str, 
+    prop_mse: torch.Tensor
 ):
 
     # Positive reward for reaching goal
@@ -1955,11 +2003,20 @@ def compute_rewards(
     # Reward for exploration
     rew_goal_pushing = rew_scale_goal_pushing * goal_bounds_pushing.int() 
     rew_goal_exp = rew_scale_goal_exp * goal_bounds_exp.int() 
+
+    # print("prop mse")
+    # print(prop_mse)
+    rew_scale_prop = -0.01
+    # print("prop shape")
+    # print(prop_mse[0,:].shape)
+    rew_prop = rew_scale_prop * prop_mse[0,:].float()
     
     if test_mode=="exponly": 
         total_reward = rew_goal_exp + rew_termination # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep
         # total_reward = rew_goal_pushing + rew_goal_exp + rew_termination # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep
         # total_reward = rew_goal_pushing + rew_termination # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep
+    elif test_case=="dr_prop": 
+        total_reward = rew_goal + rew_termination + rew_prop # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep
     else: 
         total_reward = rew_goal + rew_termination # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep
     # total_reward = rew_prop_estimate + rew_goal + rew_termination # + rew_distance # + rew_pushervel0 # + rew_pushervel0 # + rew_timestep

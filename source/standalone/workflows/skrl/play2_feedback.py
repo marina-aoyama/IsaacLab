@@ -19,6 +19,8 @@ from omni.isaac.lab.app import AppLauncher
 
 from datetime import datetime
 
+import matplotlib.pyplot as plt
+
 from source.skrl_custom.ppo_rnn_prop import PPO_RNN_PROP
 from source.skrl_custom.ppo_rnn_propexp import PPO_RNN_PROPEXP
 
@@ -197,11 +199,21 @@ def main():
         config={},
     )
 
+    plot_dir = os.path.join("logs", "skrl", "sliding_direct_eval", log_dir, "estimate_plot")
+    os.makedirs(plot_dir, exist_ok=True)
+
     test_mode = env.test_mode
 
     # reset environment
     obs, infos = env.reset()
     prev_total_episode_num = 0
+    target_list = [] 
+    output_list = []
+    rnnrmse_list = []
+    curr_prop = "staticfric"
+    prop_noise_mean_dict = {curr_prop: 0.0}   # -0.11
+    prop_noise_std_dict = {curr_prop: 0.0}
+    env._set_property_noise(prop_noise_mean_dict, prop_noise_std_dict)
     # simulate environment
     while simulation_app.is_running():
         # run everything in inference mode
@@ -215,7 +227,7 @@ def main():
                 # print(infos["exponly_obs"])
             actions, log_prob, outputs, prop_estimator_output = agent.act(obs, infos, timestep=0, timesteps=0)
             actions = outputs["mean_actions"]
-            
+                    
             # get prop estimate
             # print("denormalsied_target")
             # print(prop_estimator_output["denormalsied_target"])
@@ -227,6 +239,11 @@ def main():
             # print(prop_info)
             env._set_estimation(prop_info)
 
+            if False: 
+                target_list.append(prop_estimator_output["denormalsied_target"][0,:].reshape(1,-1))
+                output_list.append(prop_estimator_output["denormalsied_output"][0,:].reshape(1,-1))
+                rnnrmse_list.append(prop_estimator_output["rnn_rmse_fric"].reshape(1,-1))
+
             if "prop_estimation" in infos: 
                 # print("curr rmse")
                 # print(infos["prop_estimation"])
@@ -235,7 +252,54 @@ def main():
                 pass
 
             # env stepping
-            obs, _, _, _, infos = env.step(actions)
+            # obs, _, _, _, infos = env.step(actions)
+            obs, rewards, terminated, timeouts, infos = env.step(actions)
+
+            # print("Goal bounds")
+            # print(infos["prop_estimation"]["goal_bounds_exp"].shape)
+            if False: 
+                if infos["prop_estimation"]["goal_bounds_exp"][0]: 
+                    target_values = torch.cat(target_list, dim=0)  # Shape: [trials, feature_dim]
+                    output_values = torch.cat(output_list, dim=0)  # Shape: [trials, feature_dim]
+                    rnnrmse_values = torch.cat(rnnrmse_list, dim=0)  # Shape: [trials, feature_dim]
+
+                    # Plot the estimated values against the groudtruth values
+                    y1 = target_values[:,0].squeeze() 
+                    y2 = output_values[:,0].squeeze() 
+                    y3 = rnnrmse_values[:,0].squeeze() 
+
+                    # # Create trial numbers for x-axis
+                    print(y1.shape)
+                    trials = torch.arange(0, y1.shape[0])  # Shape: [8] (1 to 8)
+
+                    print(trials.shape)
+                    print(y1.shape)
+                    print(y2.shape)
+
+                    # Plot the values
+                    plt.figure(figsize=(8, 6))
+                    plt.plot(trials.cpu().numpy(), y1.cpu().numpy(), label='Groundtruth', marker='o')  # Plot tensor1
+                    plt.plot(trials.cpu().numpy(), y2.cpu().numpy(), label='Estimated', marker='s')  # Plot tensor2
+                    plt.plot(trials.cpu().numpy(), y3.cpu().numpy(), label='RMSE', marker='s')  # Plot tensor2
+
+                    # Add labels, legend, and title
+                    plt.xlabel('Timestep')
+                    plt.ylabel('Friction coefficient')
+                    plt.title('Property Estimation')
+                    plt.legend()
+                    plt.grid(True)
+
+                    fig_name = str(prev_total_episode_num)+'line_plot.png'
+                    plot_path = os.path.join(plot_dir, fig_name)
+
+                    plt.savefig(plot_path, dpi=300, bbox_inches='tight')  # Save as PNG with high resolution
+                    print("Plot path")
+                    print(plot_path)
+                    
+                    target_list = []
+                    output_list = []
+                    rnnrmse_list = []
+
             # print("Infos keys")
             # print(infos.keys())
             # print(prop_estimator_output.keys())

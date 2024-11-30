@@ -284,8 +284,9 @@ class DirectRLEnvFeedback(DirectRLEnv):
         self.all_env_success_num = 0
         self.all_env_failed_num = 0
 
-        all_idx = torch.arange(0, self.scene.env_origins.shape[0], device=self.device)
-        self._reset_idx(all_idx)
+        # all_idx = torch.arange(0, self.scene.env_origins.shape[0], device=self.device)
+        # all_idx = torch.arange(self.num_envs, dtype=torch.int64, device=self.device)
+        # self._reset_idx(all_idx)
 
     def step(self, action: torch.Tensor) -> VecEnvStepReturn:
         """Execute one time-step of the environment's dynamics.

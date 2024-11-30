@@ -18,6 +18,9 @@ import argparse
 from omni.isaac.lab.app import AppLauncher
 
 from datetime import datetime
+import time
+
+import matplotlib.pyplot as plt
 
 from source.skrl_custom.ppo_rnn_prop import PPO_RNN_PROP
 from source.skrl_custom.ppo_rnn_propexp import PPO_RNN_PROPEXP
@@ -63,7 +66,6 @@ from skrl.utils.model_instantiators.torch import deterministic_model, gaussian_m
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, load_cfg_from_registry, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.skrl import SkrlVecEnvWrapper, process_skrl_cfg
-
 
 def main():
     """Play with skrl agent."""
@@ -199,13 +201,18 @@ def main():
         config={},
     )
 
+    plot_dir = os.path.join("logs", "skrl", "sliding_direct_eval", log_dir, "estimate_plot")
+    os.makedirs(plot_dir, exist_ok=True)
+
     test_mode = env.test_mode
 
     # reset environment
     obs, infos = env.reset()
     prev_total_episode_num = 0
-    gt_success_rate = None
-    curr_prop = "staticfric"
+    target_list = [] 
+    output_list = []
+    rnnrmse_list = []
+    curr_prop = "comy"
     prop_noise_mean_dict = {curr_prop: -2.1}   # -0.11
     prop_noise_std_dict = {curr_prop: 0.0}
     env._set_property_noise(prop_noise_mean_dict, prop_noise_std_dict)
@@ -224,7 +231,7 @@ def main():
                 # print(infos["exponly_obs"])
             actions, log_prob, outputs, prop_estimator_output = agent.act(obs, infos, timestep=0, timesteps=0)
             actions = outputs["mean_actions"]
-            
+                    
             # get prop estimate
             # print("denormalsied_target")
             # print(prop_estimator_output["denormalsied_target"])
@@ -236,6 +243,11 @@ def main():
             # print(prop_info)
             env._set_estimation(prop_info)
 
+            if False: 
+                target_list.append(prop_estimator_output["denormalsied_target"][0,:].reshape(1,-1))
+                output_list.append(prop_estimator_output["denormalsied_output"][0,:].reshape(1,-1))
+                rnnrmse_list.append(prop_estimator_output["rnn_rmse_fric"].reshape(1,-1))
+
             if "prop_estimation" in infos: 
                 # print("curr rmse")
                 # print(infos["prop_estimation"])
@@ -244,7 +256,54 @@ def main():
                 pass
 
             # env stepping
-            obs, _, _, _, infos = env.step(actions)
+            # obs, _, _, _, infos = env.step(actions)
+            obs, rewards, terminated, timeouts, infos = env.step(actions)
+
+            # print("Goal bounds")
+            # print(infos["prop_estimation"]["goal_bounds_exp"].shape)
+            if False: 
+                if infos["prop_estimation"]["goal_bounds_exp"][0]: 
+                    target_values = torch.cat(target_list, dim=0)  # Shape: [trials, feature_dim]
+                    output_values = torch.cat(output_list, dim=0)  # Shape: [trials, feature_dim]
+                    rnnrmse_values = torch.cat(rnnrmse_list, dim=0)  # Shape: [trials, feature_dim]
+
+                    # Plot the estimated values against the groudtruth values
+                    y1 = target_values[:,0].squeeze() 
+                    y2 = output_values[:,0].squeeze() 
+                    y3 = rnnrmse_values[:,0].squeeze() 
+
+                    # # Create trial numbers for x-axis
+                    print(y1.shape)
+                    trials = torch.arange(0, y1.shape[0])  # Shape: [8] (1 to 8)
+
+                    print(trials.shape)
+                    print(y1.shape)
+                    print(y2.shape)
+
+                    # Plot the values
+                    plt.figure(figsize=(8, 6))
+                    plt.plot(trials.cpu().numpy(), y1.cpu().numpy(), label='Groundtruth', marker='o')  # Plot tensor1
+                    plt.plot(trials.cpu().numpy(), y2.cpu().numpy(), label='Estimated', marker='s')  # Plot tensor2
+                    plt.plot(trials.cpu().numpy(), y3.cpu().numpy(), label='RMSE', marker='s')  # Plot tensor2
+
+                    # Add labels, legend, and title
+                    plt.xlabel('Timestep')
+                    plt.ylabel('Friction coefficient')
+                    plt.title('Property Estimation')
+                    plt.legend()
+                    plt.grid(True)
+
+                    fig_name = str(prev_total_episode_num)+'line_plot.png'
+                    plot_path = os.path.join(plot_dir, fig_name)
+
+                    plt.savefig(plot_path, dpi=300, bbox_inches='tight')  # Save as PNG with high resolution
+                    print("Plot path")
+                    print(plot_path)
+                    
+                    target_list = []
+                    output_list = []
+                    rnnrmse_list = []
+
             # print("Infos keys")
             # print(infos.keys())
             # print(prop_estimator_output.keys())
@@ -272,10 +331,7 @@ def main():
             # wandb.log({"success_rate": infos["log"]["success_rate"]})
 
             total_episode_num = infos["log_eval"]["num_success"]+infos["log_eval"]["num_failure"]
-
-            # Sensitivity noise update
-            import time
-            if infos["log_eval"]["all_env_total_num"] >= 10000: 
+            if infos["log_eval"]["all_env_total_num"] >= 1000: 
                 curr_success_rate = (infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100
                 noise_success_record.append((prop_noise_mean_dict[curr_prop], curr_success_rate.cpu().numpy()))
                 print("Current noise level")
@@ -309,32 +365,19 @@ def main():
                     print("Update noise level")
                     time.sleep(3)
                 agent._clear_estimator_buf()
-                
-            # print("sensitivity check!!")
-            # print("all trial summary")
-            # print(infos["log_eval"]["all_env_total_num"])
-            # print(infos["log_eval"]["all_env_success_num"])
-            # print(infos["log_eval"]["all_env_failed_num"])
-            # print("All env success rate")
-            # print((infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100)
-            # success_rate_allenv = (infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100
-
             
             if total_episode_num!=0 and prev_total_episode_num!=total_episode_num:
                 success_rate_1env = (infos["log_eval"]["num_success"]/(infos["log_eval"]["num_success"]+infos["log_eval"]["num_failure"]))*100.0
-                # print("Success num")
-                # print(total_episode_num)
-                # print(infos["log_eval"]["num_success"])
-                # print(infos["log_eval"]["num_failure"])
-                # print(success_rate_1env)
-
-                # print("all trial summary")
-                # print(infos["log_eval"]["all_env_total_num"])
-                # print(infos["log_eval"]["all_env_success_num"])
-                # print(infos["log_eval"]["all_env_failed_num"])
-                # print("All env success rate")
-                # print((infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100)
-                success_rate_allenv = (infos["log_eval"]["all_env_success_num"]/infos["log_eval"]["all_env_total_num"])*100
+                print("Success num")
+                print(total_episode_num)
+                print(infos["log_eval"]["num_success"])
+                print(infos["log_eval"]["num_failure"])
+                print(success_rate_1env)
+                # wandb.log({"Episode_num": total_episode_num})  
+                # wandb.log({"success_rate": success_rate_1env}) 
+                success_rate_allenv = infos["log"]["success_rate"]
+                print("All env success rate")
+                print(success_rate_allenv)
 
                 end_timestep = infos["log_eval"]["end_timestep"]
                 end_timestep_seconds = end_timestep * step_duration
@@ -343,25 +386,9 @@ def main():
                     end_rmse = infos["log"]["end_rmse"]
                     # print(infos["log"]["end_rmse"])
                     # print(end_rmse)       
-                    wandb.log({"episode_num": total_episode_num, 
-                               "success_rate": success_rate_1env, 
-                               "success_rate_allenv": success_rate_allenv, 
-                               "total_trials": infos["log_eval"]["all_env_total_num"], 
-                               "success_trials": infos["log_eval"]["all_env_success_num"], 
-                               "failed_trials": infos["log_eval"]["all_env_failed_num"], 
-                               "end_rmse": end_rmse, 
-                               "end_timestep": end_timestep, 
-                               "end_timestep_seconds": end_timestep_seconds
-                               })
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_rmse": end_rmse, "end_timestep": end_timestep, "end_timestep_seconds": end_timestep_seconds})
                 else: 
-                    wandb.log({"episode_num": total_episode_num, 
-                               "success_rate": success_rate_1env, 
-                               "success_rate_allenv": success_rate_allenv, 
-                               "total_trials": infos["log_eval"]["all_env_total_num"], 
-                               "success_trials": infos["log_eval"]["all_env_success_num"], 
-                               "failed_trials": infos["log_eval"]["all_env_failed_num"], 
-                               "end_timestep": end_timestep, 
-                               "end_timestep_seconds":end_timestep_seconds})
+                    wandb.log({"episode_num": total_episode_num, "success_rate": success_rate_1env, "success_rate_allenv": success_rate_allenv, "end_timestep": end_timestep, "end_timestep_seconds":end_timestep_seconds})
                 prev_total_episode_num = total_episode_num 
 
             # print(total_episode_num)

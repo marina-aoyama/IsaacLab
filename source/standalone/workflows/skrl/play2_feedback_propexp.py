@@ -370,12 +370,13 @@ def main():
                     # print(normalised_expend_prop_info)
                 elif prop_mode=="com": 
                     # Normalise
-                    com_min = -0.02
-                    com_max = 0.02
+                    com_min = -0.0224
+                    com_max = 0.0224
                     state_norm_min = -2
                     state_norm_max = 2
 
-                    normalised_expend_prop_info = (expend_prop_info - com_min) / (com_max - com_min)
+                    # normalised_expend_prop_info = (expend_prop_info - com_min) / (com_max - com_min)
+                    normalised_expend_prop_info = normalize(expend_prop_info, com_min, com_max, state_norm_min, state_norm_max)
 
                     # Normalize the entire tensor (broadcasting works here)
                     # normalised_expend_prop_info = normalize(expend_prop_info, com_min, com_max, state_norm_min, state_norm_max)
@@ -383,6 +384,9 @@ def main():
                     # print("normalised prop")
                     # print(normalised_expend_prop_info)
                 elif prop_mode=="fric_com": 
+
+                    # print("Exp end prop info")
+                    # print(expend_prop_info)
 
                     # Normalise friction
                     dynamic_frictions_min = 0.05
@@ -394,12 +398,13 @@ def main():
                     normalised_expend_prop_info_fric = normalised_expend_prop_info_fric.reshape(-1,1)
 
                     # Normalise com
-                    com_min = -0.02
-                    com_max = 0.02
+                    com_min = -0.0224
+                    com_max = 0.0224
                     state_norm_min = -2
                     state_norm_max = 2
 
-                    normalised_expend_prop_info_com = (expend_prop_info[:,[1,2]] - com_min) / (com_max - com_min)
+                    # normalised_expend_prop_info_com = (expend_prop_info[:,[1,2]] - com_min) / (com_max - com_min)
+                    normalised_expend_prop_info_com = normalize(expend_prop_info[:,[1,2]], com_min, com_max, state_norm_min, state_norm_max)
 
                     normalised_expend_prop_info = torch.cat((normalised_expend_prop_info_fric, normalised_expend_prop_info_com), dim=1)
 
@@ -416,16 +421,7 @@ def main():
                     # print(curr_prop_info)
                     # print(curr_prop_estimated)
                     pass
-                
-            # # print("Check")
-            # # print(curr_task_phase)
-            # print(curr_prop_info)
-            # print(curr_prop_estimated)
-            # print(obs[:,[10,11]])
-            # # checkpoint2
-            # print("obs ground truth")
-            # # print(obs[:, 10])
-            # print(obs[:, [10,11]])
+
             obs_task = obs
             if test_mode != "taskonly": 
                 if normalised_expend_prop_info is not None: 
@@ -451,24 +447,7 @@ def main():
                             obs_task[curr_task_phase, 10] = normalised_expend_prop_info[curr_task_phase, 0]
                             obs_task[curr_task_phase, 11] = normalised_expend_prop_info[curr_task_phase, 1]  
                             obs_task[curr_task_phase, 12] = normalised_expend_prop_info[curr_task_phase, 2]    
-                        
-                    # if curr_task_phase.any():
-                    #     if prop_mode=="fric": 
-                    #         obs_task[curr_task_phase, 10] = normalised_expend_prop_info[curr_task_phase, 0]
-                    #     elif prop_mode=="com": 
-                    #         # print("CoM estimates")
-                    #         # print(curr_prop_info)
-                    #         # print(curr_prop_estimated)
-                    #         obs_task[curr_task_phase, [10,11]] = normalised_expend_prop_info[curr_task_phase, [0,1]]
-
-            # # print(obs_task[:,11])
-
-            # Compute action
-            # actions = agent.act(obs, timestep=0, timesteps=0)[0]
-            # # checkpoint3
-            # print("obs task replaced")
-            # # print(obs_task[:, 10])
-            # print(obs_task[:, [10,11]])
+                            # pass
 
             actions_task, log_prob_task, outputs_task, prop_estimator_output_task = agent.act(obs_task, infos, timestep=0, timesteps=0)
             actions_task = outputs_task["mean_actions"]
