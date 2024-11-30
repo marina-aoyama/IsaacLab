@@ -618,7 +618,7 @@ def custom_gaussian_model_rnn2(observation_space: Optional[Union[int, Tuple[int]
 
             self.sequence_length = 64
             self.num_layers = 1
-            self.num_envs = 4096
+            self.num_envs = 8192# 4096
             self.hidden_size = 128
             self.feature_size = 256
 

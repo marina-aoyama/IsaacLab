@@ -352,15 +352,25 @@ class DirectRLEnvFeedback(DirectRLEnv):
             # print(curr_rmse.shape)
             end_tensor = success_tensor | failed_tensor
             # self.end_rmse_record = torch.where(end_tensor, torch.tensor(True, dtype=torch.bool), self.success_record)
-            if self.prop_mode=="fric" or self.prop_mode=="com": 
-                self.end_rmse_record = torch.where(end_tensor, curr_rmse, self.end_rmse_record)
+            if self.prop_mode=="fric": 
+                self.end_rmse_record_fric = torch.where(end_tensor, curr_rmse, self.end_rmse_record_fric)
                 # print("End")
                 # print(end_tensor)
                 # print(curr_rmse)
                 # print(self.end_rmse_record)
                 # print(self.end_rmse_record)
                 # print(self.end_rmse_record.mean())
-                end_rmse_record_mean = self.end_rmse_record.mean()
+                end_rmse_record_mean_fric = self.end_rmse_record_fric.mean()
+                # print(end_rmse_record_mean)
+            elif self.prop_mode=="com": 
+                self.end_rmse_record_com = torch.where(end_tensor, curr_rmse, self.end_rmse_record_com)
+                # print("End")
+                # print(end_tensor)
+                # print(curr_rmse)
+                # print(self.end_rmse_record)
+                # print(self.end_rmse_record)
+                # print(self.end_rmse_record.mean())
+                end_rmse_record_mean_com = self.end_rmse_record_com.mean()
                 # print(end_rmse_record_mean)
             elif self.prop_mode=="fric_com": 
                 self.end_rmse_record_fric = torch.where(end_tensor, curr_rmse[:,0], self.end_rmse_record_fric)
@@ -463,9 +473,12 @@ class DirectRLEnvFeedback(DirectRLEnv):
         # print(self.num_envs)
         # print(success_rate)
 
-        if self.prop_mode=="fric" or self.prop_mode=="com": 
+        if self.prop_mode=="fric": 
             self.extras["log"] = {"success_rate": success_rate, 
-                              "end_rmse": end_rmse_record_mean}
+                              "end_rmse_fric": end_rmse_record_mean_fric}
+        elif self.prop_mode=="com": 
+            self.extras["log"] = {"success_rate": success_rate, 
+                              "end_rmse_com": end_rmse_record_mean_com}
         elif self.prop_mode=="fric_com": 
             self.extras["log"] = {"success_rate": success_rate, 
                                     "end_rmse_fric": end_rmse_record_mean_fric, 
