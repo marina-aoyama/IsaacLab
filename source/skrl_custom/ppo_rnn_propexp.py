@@ -687,14 +687,6 @@ class PPO_RNN_PROPEXP(Agent):
                 os.makedirs(log_model_dir)
             best_model_path = log_model_dir + "/LSTM_best.pth"
             torch.save(self.prop_model.to(self.device).state_dict(), best_model_path)
-<<<<<<< HEAD
-            # print("Saving Model Parameters:")
-            # for name, param in self.prop_model.state_dict().items():
-            #     print(name, param.size())
-            # import sys
-            # sys.exit()
-=======
->>>>>>> parent of 375f65db... Match exp rnn cfg
 
             curr_model_path = log_model_dir + "/LSTM_"+str(timestep)+".pth"
             torch.save(self.prop_model.to(self.device).state_dict(), curr_model_path)
