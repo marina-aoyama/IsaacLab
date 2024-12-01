@@ -204,6 +204,8 @@ def main():
 
     test_mode = env.test_mode
 
+    plot_1epi_error = False
+
     # reset environment
     obs, infos = env.reset()
     prev_total_episode_num = 0
@@ -239,7 +241,7 @@ def main():
             # print(prop_info)
             env._set_estimation(prop_info)
 
-            if False: 
+            if plot_1epi_error: 
                 target_list.append(prop_estimator_output["denormalsied_target"][0,:].reshape(1,-1))
                 output_list.append(prop_estimator_output["denormalsied_output"][0,:].reshape(1,-1))
                 rnnrmse_list.append(prop_estimator_output["rnn_rmse_fric"].reshape(1,-1))
@@ -257,7 +259,7 @@ def main():
 
             # print("Goal bounds")
             # print(infos["prop_estimation"]["goal_bounds_exp"].shape)
-            if False: 
+            if plot_1epi_error: 
                 if infos["prop_estimation"]["goal_bounds_exp"][0]: 
                     target_values = torch.cat(target_list, dim=0)  # Shape: [trials, feature_dim]
                     output_values = torch.cat(output_list, dim=0)  # Shape: [trials, feature_dim]

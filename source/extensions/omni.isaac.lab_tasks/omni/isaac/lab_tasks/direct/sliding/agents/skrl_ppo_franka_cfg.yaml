@@ -16,6 +16,10 @@ models:
     output_shape: "Shape.ACTIONS"
     output_activation: ""
     output_scale: 1.0
+    # rnn_hidden_size: 128
+    # rnn_num_layers: 1
+    # rnn_sequence_length: 16
+
   value:  # see 'skrl.utils.model_instantiators.torch.deterministic_model' for parameter details
     clip_actions: False
     input_shape: "Shape.STATES"
@@ -24,6 +28,10 @@ models:
     output_shape: "Shape.ONE"
     output_activation: ""
     output_scale: 1.0
+    # rnn_hidden_size: 128
+    # rnn_num_layers: 1
+    # rnn_sequence_length: 16
+
 
 
 # PPO agent configuration (field names are from PPO_DEFAULT_CONFIG)
@@ -101,12 +109,20 @@ prop_estimator:
   # vel_max: 2.5
   # feature_target_min: -0.9
   # feature_target_max: 0.9
-  pos_min: 0.4005
-  pos_max: 0.9458
-  rot_min: -1.0000
-  rot_max: 0.9496
-  vel_min: -1.6837
-  vel_max: 1.1272
+  # pos_min: 0.4005
+  # pos_max: 0.9458
+  # rot_min: -1.0000
+  # rot_max: 0.9496
+  # vel_min: -1.6837
+  # vel_max: 1.1272
+
+  pos_min: -1.0
+  pos_max: 1.0
+  rot_min: -1.0 
+  rot_max: 1.0
+  vel_min: -1.0
+  vel_max: 1.0
+
   feature_target_min: -0.9
   feature_target_max: 0.9
 
