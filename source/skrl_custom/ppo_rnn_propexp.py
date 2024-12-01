@@ -108,8 +108,6 @@ class PPO_RNN_PROPEXP(Agent):
         """
 
         _cfg = copy.deepcopy(PPO_DEFAULT_CONFIG)
-        print("Configggggggg")
-        print(cfg)
         _cfg.update(cfg if cfg is not None else {})
         super().__init__(models=models,
                          memory=memory,
@@ -236,11 +234,6 @@ class PPO_RNN_PROPEXP(Agent):
         # if not self.cfg["prop_estimator"]["pre_trained"]: 
         if not self.cfg["pre_trained_models"]["pre_trained"]: 
             print("Train prop model from scratchs")
-            # print("Saving Model Parameters:")
-            # for name, param in self.prop_model.state_dict().items():
-            #     print(name, param.size())
-            # import sys
-            # sys.exit()
         else: 
             print("Load pre-trained prop model")
             # self.prop_model.eval()
@@ -251,24 +244,7 @@ class PPO_RNN_PROPEXP(Agent):
             # trained_model_path = "/workspace/isaaclab/logs/skrl/exploration_direct/2024-10-14_09-49-25/checkpoints_prop/LSTM_best.pth"
             # trained_model_path = self.cfg["prop_estimator"]["pre_trained_path"]
             trained_model_path = self.cfg["pre_trained_models"]["pre_trained_path"]
-
-            print("Hidden size")
-            print(self.cfg["prop_estimator"]["hidden_size"])
-            print(hidden_size)
-            
-            print("Current Model Parameters:")
-            for name, param in self.prop_model.state_dict().items():
-                print(name, param.size())
-            
-            print("Loaded Model Parameters:")
-            checkpoint = torch.load(trained_model_path, map_location=torch.device(self.device))
-            for name, param in checkpoint.items():
-                print(name, param.size())
-            # import sys
-            # sys.exit(0)
-            
             self.prop_model.load_state_dict(torch.load(trained_model_path, map_location=torch.device(self.device)))
-
             print("Pre-trained model loaded")
 
         # self.prop_model_freeze_weights = self.cfg["prop_estimator"]["freeze_weights"]
@@ -711,11 +687,14 @@ class PPO_RNN_PROPEXP(Agent):
                 os.makedirs(log_model_dir)
             best_model_path = log_model_dir + "/LSTM_best.pth"
             torch.save(self.prop_model.to(self.device).state_dict(), best_model_path)
+<<<<<<< HEAD
             # print("Saving Model Parameters:")
             # for name, param in self.prop_model.state_dict().items():
             #     print(name, param.size())
             # import sys
             # sys.exit()
+=======
+>>>>>>> parent of 375f65db... Match exp rnn cfg
 
             curr_model_path = log_model_dir + "/LSTM_"+str(timestep)+".pth"
             torch.save(self.prop_model.to(self.device).state_dict(), curr_model_path)

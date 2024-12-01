@@ -616,9 +616,9 @@ def custom_gaussian_model_rnn2(observation_space: Optional[Union[int, Tuple[int]
             Model.__init__(self, observation_space, action_space, device)
             GaussianMixin.__init__(self, clip_actions, clip_log_std, min_log_std, max_log_std, reduction)
 
-            self.sequence_length = 16
+            self.sequence_length = 64
             self.num_layers = 1
-            self.num_envs = 4096# 4096
+            self.num_envs = 4096
             self.hidden_size = 128
             self.feature_size = 256
 
@@ -1042,9 +1042,9 @@ def custom_deterministic_model_rnn2(observation_space: Optional[Union[int, Tuple
             Model.__init__(self, observation_space, action_space, device)
             DeterministicMixin.__init__(self, clip_actions) 
 
-            self.sequence_length = 16 # 64
+            self.sequence_length = 64
             self.num_layers = 1
-            self.num_envs = 4096 # 4096
+            self.num_envs = 4096
             self.hidden_size = 128
             self.feature_size = 256
 
