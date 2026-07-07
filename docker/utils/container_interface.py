@@ -85,6 +85,14 @@ class ContainerInterface:
         self.environ = os.environ.copy()
         self.environ["DOCKER_NAME_SUFFIX"] = self.suffix
 
+        # when a suffix is given, also isolate the Compose project namespace so that the
+        # named volumes (logs, caches, data, docs) are not shared with other suffixed
+        # instances. Without this, the project name defaults to the basename of the
+        # context directory (e.g. "docker"), which is the same across clones/checkouts
+        # and causes different instances to silently share the same volumes.
+        if self.suffix:
+            self.environ["COMPOSE_PROJECT_NAME"] = f"isaac-lab{self.suffix}"
+
         # resolve the image extension through the passed yamls and envs
         self._resolve_image_extension(yamls, envs)
         # load the environment variables from the .env files
