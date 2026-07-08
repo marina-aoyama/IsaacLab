@@ -205,6 +205,24 @@ class ContainerInterface:
         )
         subprocess.run(cmd, check=False, cwd=self.context_dir, env=self.environ)
 
+        # install the locally mounted skrl checkout in editable mode so that it takes
+        # precedence over the skrl package installed from PyPI (if any)
+        print("[INFO] Installing local skrl checkout (editable) inside the container...\n")
+        isaaclab_path = self.environ.get("DOCKER_ISAACLAB_PATH", "/workspace/isaaclab")
+        cmd = [
+            "docker",
+            "exec",
+            self.container_name,
+            f"{isaaclab_path}/isaaclab.sh",
+            "-p",
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            "/workspace/skrl",
+        ]
+        subprocess.run(cmd, check=False, env=self.environ)
+
     def enter(self):
         """Enter the running container by executing a bash shell.
 
