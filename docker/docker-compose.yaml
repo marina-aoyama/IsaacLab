@@ -56,6 +56,11 @@ x-default-isaac-lab-volumes: &default-isaac-lab-volumes
   - type: bind
     source: ../../skrl
     target: /workspace/skrl
+    # Mount the franka_pushing external project so its task is importable
+    # from within the container (editable install)
+  - type: bind
+    source: ../../franka_pushing
+    target: /workspace/franka_pushing
     # The effect of these volumes is twofold:
     # 1. Prevent root-owned files from flooding the _build and logs dir
     #    on the host machine
