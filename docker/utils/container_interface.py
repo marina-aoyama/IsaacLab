@@ -223,6 +223,22 @@ class ContainerInterface:
         ]
         subprocess.run(cmd, check=False, env=self.environ)
 
+        # install the locally mounted efficient_dr external project in editable mode
+        print("[INFO] Installing local efficient_dr project (editable) inside the container...\n")
+        cmd = [
+            "docker",
+            "exec",
+            self.container_name,
+            f"{isaaclab_path}/isaaclab.sh",
+            "-p",
+            "-m",
+            "pip",
+            "install",
+            "-e",
+            "/workspace/efficient_dr/source/efficient_dr",
+        ]
+        subprocess.run(cmd, check=False, env=self.environ)
+
     def enter(self):
         """Enter the running container by executing a bash shell.
 

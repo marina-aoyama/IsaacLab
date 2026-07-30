@@ -56,6 +56,11 @@ x-default-isaac-lab-volumes: &default-isaac-lab-volumes
   - type: bind
     source: ../../skrl
     target: /workspace/skrl
+    # Mount the external efficient_dr project (own tasks, kept outside
+    # the Isaac Lab source tree) so edits on the host are reflected live
+  - type: bind
+    source: ../../efficient_dr
+    target: /workspace/efficient_dr
     # The effect of these volumes is twofold:
     # 1. Prevent root-owned files from flooding the _build and logs dir
     #    on the host machine
